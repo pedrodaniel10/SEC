@@ -2,13 +2,16 @@ package pt.ulisboa.tecnico.sec.server;
 
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.server.services.HdsNotaryServiceImpl;
 
 /**
  * HdsNotaryService world!
  */
 public class HdsNotary {
-    public static final int registryPort = 1099;
+    private static final Logger logger = Logger.getLogger(HdsNotary.class);
+    // TODO: Change this hard-coded registry port to dynamic.
+    private static final int registryPort = 1099;
 
     public static void main(String[] args) {
         try {
@@ -18,7 +21,7 @@ public class HdsNotary {
 
             reg.rebind("HdsNotaryService", hello);
 
-            System.err.println("Server up");
+            logger.info("Server up");
 
             System.in.read();
 
