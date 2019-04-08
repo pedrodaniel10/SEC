@@ -5,7 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Unit test for simple HdsNotary.
+ * Unit test for simple HdsNotaryApplication.
  */
 public class HdsNotaryTest {
     /**

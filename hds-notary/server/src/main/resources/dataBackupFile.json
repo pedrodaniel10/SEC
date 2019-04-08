@@ -1,0 +1,25 @@
+{
+  "transactions" : {},
+  "users" : {
+    "2a87ec35-36e2-4ff7-b83a-304044b1cfbb" : {
+      "name" : "Alice",
+      "userId" : "2a87ec35-36e2-4ff7-b83a-304044b1cfbb"
+    },
+    "88fb7df7-f627-4511-bb55-d2cb04d6e858" : {
+      "name" : "Bob",
+      "userId" : "88fb7df7-f627-4511-bb55-d2cb04d6e858"
+    },
+    "44dbd41e-4f29-4573-b18d-977d68d50016" : {
+      "name" : "Charlie",
+      "userId" : "44dbd41e-4f29-4573-b18d-977d68d50016"
+    }
+  },
+  "goods" : {
+    "b2b7d0b8-8ed7-487c-99dd-37fd130f3340" : {
+      "name" : "House",
+      "goodId" : "b2b7d0b8-8ed7-487c-99dd-37fd130f3340",
+      "ownerId" : "44dbd41e-4f29-4573-b18d-977d68d50016",
+      "onSale" : true
+    }
+  }
+}
