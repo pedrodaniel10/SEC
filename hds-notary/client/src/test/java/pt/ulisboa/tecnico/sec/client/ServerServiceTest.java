@@ -312,4 +312,5 @@ public class ServerServiceTest {
                 goodId, String.valueOf(requestNumber)));
     }
 
+    // TODO: Transaction tests with citizen card.
 }

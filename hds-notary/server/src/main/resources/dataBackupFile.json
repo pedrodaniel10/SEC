@@ -4,16 +4,19 @@
     "0": {
       "name": "Alice",
       "userId": "0",
+      "requestNumber": 0,
       "publicKeyS": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDAl1cmpKX/iIlbJoLs+ZPjn/PB xSml0ezi7Eukfz71Ip8ijnAZpmcX/W26dyGrf0XaOFJcHzIw1qyZE0ZO5CU4Kt/3 wvG278ztLfu9QJ8ft7DBdrYnbSN7q2y7gcQIekraCIJO+sEmsjGKBSe6EzkCUIH2 LdXseOEpQcwbcUmQ0wIDAQAB"
     },
     "1": {
       "name": "Bob",
       "userId": "1",
+      "requestNumber": 0,
       "publicKeyS": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDBUM+E1sq4rgdEIkW3eTvrfFMw ZR+IvhHnBr2a2g8ysaFyitysdDYMTqif5IzQt55RFoOWUUI7ZxMTCsOtz86E88Gm tUxwSeuwCvxBEsFCdl5/2UackPZ4Qk54tMJRB2lVGiTm5hMkoTQFnVOqH6rTMD07 L1Xjho2Cr/RUUC1I0wIDAQAB"
     },
     "2": {
       "name": "Charlie",
       "userId": "2",
+      "requestNumber": 0,
       "publicKeyS": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDfsCK4FfvWrfTOgWsWB/8M6OxG KWJEmHdezogzRAi6mpBnh0hYUmC1hThMYoA2RxMBEw16j9R2LCbA9GWZ9w2fF73D vQnWKSKTI/W9S7KK/7TbMb90aga15vCaoDWo7JCMjO9tbNY5jBJj06BfrZdF1MVU Sc9cN4LcTg4z1mWU7QIDAQAB"
     }
   },
@@ -22,6 +25,18 @@
       "name": "House",
       "goodId": "0",
       "ownerId": "2",
+      "onSale": false
+    },
+    "1": {
+      "name": "Computer",
+      "goodId": "1",
+      "ownerId": "0",
+      "onSale": false
+    },
+    "2": {
+      "name": "Bed",
+      "goodId": "2",
+      "ownerId": "1",
       "onSale": true
     }
   }
