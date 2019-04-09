@@ -1,10 +1,10 @@
-package pt.ulisboa.tecnico.sec.library.data;
+package pt.ulisboa.tecnico.sec.client.library.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serializable;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.client.library.crypto.CryptoUtils;
 
 public class User implements Serializable {
 

@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.sec.library.data;
+package pt.ulisboa.tecnico.sec.client.library.data;
 
 import java.io.Serializable;
 

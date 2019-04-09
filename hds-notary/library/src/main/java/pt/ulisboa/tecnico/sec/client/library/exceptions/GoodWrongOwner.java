@@ -1,6 +1,7 @@
-package pt.ulisboa.tecnico.sec.library.exceptions;
+package pt.ulisboa.tecnico.sec.client.library.exceptions;
 
 public class GoodWrongOwner extends ServerException {
+
     public GoodWrongOwner() {
     }
 
@@ -16,7 +17,8 @@ public class GoodWrongOwner extends ServerException {
         super(cause);
     }
 
-    public GoodWrongOwner(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    public GoodWrongOwner(String message, Throwable cause, boolean enableSuppression,
+        boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

@@ -1,6 +1,7 @@
-package pt.ulisboa.tecnico.sec.library.exceptions;
+package pt.ulisboa.tecnico.sec.client.library.exceptions;
 
 public class GoodIsNotOnSale extends ServerException {
+
     public GoodIsNotOnSale() {
     }
 
@@ -16,7 +17,8 @@ public class GoodIsNotOnSale extends ServerException {
         super(cause);
     }
 
-    public GoodIsNotOnSale(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    public GoodIsNotOnSale(String message, Throwable cause, boolean enableSuppression,
+        boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

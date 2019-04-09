@@ -1,6 +1,7 @@
-package pt.ulisboa.tecnico.sec.library.exceptions;
+package pt.ulisboa.tecnico.sec.client.library.exceptions;
 
 public class ServerException extends Exception {
+
     public ServerException() {
     }
 
@@ -16,7 +17,8 @@ public class ServerException extends Exception {
         super(cause);
     }
 
-    public ServerException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    public ServerException(String message, Throwable cause, boolean enableSuppression,
+        boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

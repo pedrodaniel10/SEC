@@ -1,10 +1,10 @@
-package pt.ulisboa.tecnico.sec;
+package pt.ulisboa.tecnico.sec.client;
 
 import org.junit.Assert;
 import org.junit.Test;
-import pt.ulisboa.tecnico.sec.library.HdsProperties;
-import pt.ulisboa.tecnico.sec.library.data.User;
-import pt.ulisboa.tecnico.sec.library.exceptions.UserNotFoundException;
+import pt.ulisboa.tecnico.sec.client.library.HdsProperties;
+import pt.ulisboa.tecnico.sec.client.library.data.User;
+import pt.ulisboa.tecnico.sec.client.library.exceptions.UserNotFoundException;
 
 /**
  * Library tests
@@ -17,9 +17,9 @@ public class LibraryTest {
         User bob = HdsProperties.getUser("bob");
         User charlie = HdsProperties.getUser("charlie");
 
-        Assert.assertEquals(alice.getUserId(), 0);
-        Assert.assertEquals(bob.getUserId(), 1);
-        Assert.assertEquals(charlie.getUserId(), 2);
+        Assert.assertEquals("0", alice.getUserId());
+        Assert.assertEquals("1", bob.getUserId());
+        Assert.assertEquals("2", charlie.getUserId());
 
     }
 }

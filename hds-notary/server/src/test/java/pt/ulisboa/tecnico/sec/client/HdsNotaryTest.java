@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.sec;
+package pt.ulisboa.tecnico.sec.client;
 
 import static org.junit.Assert.assertTrue;
 
@@ -9,11 +9,11 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import org.junit.Before;
 import org.junit.Test;
-import pt.ulisboa.tecnico.sec.library.HdsProperties;
-import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
-import pt.ulisboa.tecnico.sec.library.exceptions.UserNotFoundException;
-import pt.ulisboa.tecnico.sec.server.services.HdsNotaryState;
-import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
+import pt.ulisboa.tecnico.sec.client.library.HdsProperties;
+import pt.ulisboa.tecnico.sec.client.library.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.client.library.exceptions.UserNotFoundException;
+import pt.ulisboa.tecnico.sec.client.server.services.HdsNotaryState;
+import pt.ulisboa.tecnico.sec.client.server.utils.PersistenceUtils;
 
 /**
  * Unit test for simple HdsNotaryApplication.
@@ -45,13 +45,13 @@ public class HdsNotaryTest {
         throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String plainText = "test";
 
-        byte[] aliceSignature = CryptoUtils.makeDigitalSignature(plainText, alicePrivateKey);
-        byte[] bobSignature = CryptoUtils.makeDigitalSignature(plainText, bobPrivateKey);
-        byte[] charlieSignature = CryptoUtils.makeDigitalSignature(plainText, charliePrivateKey);
+        byte[] aliceSignature = CryptoUtils.makeDigitalSignature(alicePrivateKey, plainText);
+        byte[] bobSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, plainText);
+        byte[] charlieSignature = CryptoUtils.makeDigitalSignature(charliePrivateKey, plainText);
 
-        assertTrue(CryptoUtils.verifyDigitalSignature(aliceSignature, plainText, alicePublicKey));
-        assertTrue(CryptoUtils.verifyDigitalSignature(bobSignature, plainText, bobPublicKey));
+        assertTrue(CryptoUtils.verifyDigitalSignature(alicePublicKey, aliceSignature, plainText));
+        assertTrue(CryptoUtils.verifyDigitalSignature(bobPublicKey, bobSignature, plainText));
         assertTrue(
-            CryptoUtils.verifyDigitalSignature(charlieSignature, plainText, charliePublicKey));
+            CryptoUtils.verifyDigitalSignature(charliePublicKey, charlieSignature, plainText));
     }
 }
