@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.sec.server.utils;
+package pt.ulisboa.tecnico.sec.client.server.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -7,12 +7,13 @@ import java.net.URISyntaxException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
-import pt.ulisboa.tecnico.sec.server.services.HdsNotaryState;
+import pt.ulisboa.tecnico.sec.client.server.services.HdsNotaryState;
 
 /**
  * Class that handles the persistent data.
  */
 public final class PersistenceUtils {
+
     private static final Logger logger = Logger.getLogger(PersistenceUtils.class);
 
     private static final String DATA_FILE = "dataFile.json";
@@ -66,7 +67,8 @@ public final class PersistenceUtils {
         ObjectMapper mapper = new ObjectMapper();
 
         try {
-            String jsonInString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(serverState);
+            String jsonInString = mapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(serverState);
 
             FileUtils.writeStringToFile(dataFile, jsonInString, (String) null);
             FileUtils.writeStringToFile(dataBackupFile, jsonInString, (String) null);

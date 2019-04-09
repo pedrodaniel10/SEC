@@ -1,14 +1,15 @@
-package pt.ulisboa.tecnico.sec.library;
+package pt.ulisboa.tecnico.sec.client.library;
 
 import java.io.IOException;
 import java.util.Properties;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.log4j.Logger;
-import pt.ulisboa.tecnico.sec.library.data.User;
-import pt.ulisboa.tecnico.sec.library.exceptions.UserNotFoundException;
+import pt.ulisboa.tecnico.sec.client.library.data.User;
+import pt.ulisboa.tecnico.sec.client.library.exceptions.UserNotFoundException;
 
 public final class HdsProperties {
+
     private static final Logger logger = Logger.getLogger(HdsProperties.class);
     private static final String PROPERTIES_USERS = "users.properties";
     private static final ClassLoader classLoader = HdsProperties.class.getClassLoader();
@@ -79,5 +80,9 @@ public final class HdsProperties {
         String host = properties.getProperty(user.getName() + ".host");
         int port = HdsProperties.getClientPort(user.getName());
         return "//" + host + ":" + port + "/ClientService";
+    }
+
+    public static String getClientPrivateKey(String name) {
+        return properties.getProperty(name + ".privKey");
     }
 }

@@ -1,43 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
-    <parent>
-        <groupId>pt.ulisboa.tecnico.sec</groupId>
-        <artifactId>hds-notary</artifactId>
-        <version>1.0</version>
-    </parent>
-
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <artifactId>client</artifactId>
-    <name>client</name>
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
-
-    <dependencies>
-        <!-- Services Interface -->
-        <dependency>
-            <groupId>pt.ulisboa.tecnico.sec</groupId>
-            <artifactId>library</artifactId>
-            <version>1.0</version>
-            <scope>compile</scope>
-        </dependency>
-
-    </dependencies>
 
     <build>
 
         <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
             <plugins>
                 <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>1.6.0</version>
+                    <configuration>
+                        <!-- to prevent deprecation warning: -->
+                        <killAfter>-1</killAfter>
+                        <mainClass>pt.ulisboa.tecnico.sec.client.client.ClientApplication
+                        </mainClass>
+                        <systemProperties>
+                        </systemProperties>
+                    </configuration>
                     <executions>
                         <execution>
                             <goals>
@@ -45,13 +26,8 @@
                             </goals>
                         </execution>
                     </executions>
-                    <configuration>
-                        <!-- to prevent deprecation warning: -->
-                        <killAfter>-1</killAfter>
-                        <mainClass>pt.ulisboa.tecnico.sec.client.ClientApplication</mainClass>
-                        <systemProperties>
-                        </systemProperties>
-                    </configuration>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <version>1.6.0</version>
                 </plugin>
 
 
@@ -71,8 +47,10 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.22.1</version>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <version>2.5</version>
                 </plugin>
+
                 <plugin>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>3.0.2</version>
@@ -97,4 +75,38 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <dependencies>
+        <!-- Services Interface -->
+        <dependency>
+            <artifactId>library</artifactId>
+            <groupId>pt.ulisboa.tecnico.sec</groupId>
+            <scope>compile</scope>
+            <version>1.0</version>
+        </dependency>
+
+        <!-- Server -->
+        <dependency>
+            <artifactId>server</artifactId>
+            <groupId>pt.ulisboa.tecnico.sec</groupId>
+            <scope>compile</scope>
+            <version>1.0</version>
+        </dependency>
+
+    </dependencies>
+    <modelVersion>4.0.0</modelVersion>
+
+    <name>client</name>
+
+    <parent>
+        <artifactId>hds-notary</artifactId>
+        <groupId>pt.ulisboa.tecnico.sec</groupId>
+        <version>1.0</version>
+    </parent>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 </project>

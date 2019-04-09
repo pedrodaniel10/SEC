@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.sec.library.data;
 import java.io.Serializable;
 
 public class Good implements Serializable {
+
     private String name;
     private String goodId;
     private String ownerId;

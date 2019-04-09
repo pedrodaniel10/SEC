@@ -3,10 +3,14 @@ package pt.ulisboa.tecnico.sec.library.data;
 import java.io.Serializable;
 
 public class Transaction implements Serializable {
+
     private String transactionId;
     private String buyerId;
     private String sellerId;
     private String goodId;
+
+    private byte[] sellerSignature;
+    private byte[] buyerSignature;
 
     public Transaction() {
     }
@@ -48,5 +52,21 @@ public class Transaction implements Serializable {
 
     public void setGoodId(String goodId) {
         this.goodId = goodId;
+    }
+
+    public byte[] getSellerSignature() {
+        return sellerSignature;
+    }
+
+    public void setSellerSignature(byte[] sellerSignature) {
+        this.sellerSignature = sellerSignature;
+    }
+
+    public byte[] getBuyerSignature() {
+        return buyerSignature;
+    }
+
+    public void setBuyerSignature(byte[] buyerSignature) {
+        this.buyerSignature = buyerSignature;
     }
 }

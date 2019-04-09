@@ -1,15 +1,16 @@
-package pt.ulisboa.tecnico.sec.server;
+package pt.ulisboa.tecnico.sec.client.server;
 
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import org.apache.log4j.Logger;
-import pt.ulisboa.tecnico.sec.library.HdsProperties;
-import pt.ulisboa.tecnico.sec.server.services.HdsNotaryServiceImpl;
+import pt.ulisboa.tecnico.sec.client.library.HdsProperties;
+import pt.ulisboa.tecnico.sec.client.server.services.HdsNotaryServiceImpl;
 
 /**
  * HdsNotaryService world!
  */
 public class HdsNotaryApplication {
+
     private static final Logger logger = Logger.getLogger(HdsNotaryApplication.class);
 
     public static void main(String[] args) {
