@@ -14,7 +14,7 @@
                     <configuration>
                         <!-- to prevent deprecation warning: -->
                         <killAfter>-1</killAfter>
-                        <mainClass>pt.ulisboa.tecnico.sec.client.client.ClientApplication
+                        <mainClass>pt.ulisboa.tecnico.sec.server.client.ClientApplication
                         </mainClass>
                         <systemProperties>
                         </systemProperties>

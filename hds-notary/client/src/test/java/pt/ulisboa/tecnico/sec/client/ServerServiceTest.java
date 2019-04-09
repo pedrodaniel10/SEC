@@ -11,17 +11,17 @@ import java.security.interfaces.RSAPrivateKey;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import pt.ulisboa.tecnico.sec.client.client.ClientApplication;
-import pt.ulisboa.tecnico.sec.client.library.HdsProperties;
-import pt.ulisboa.tecnico.sec.client.library.crypto.CryptoUtils;
-import pt.ulisboa.tecnico.sec.client.library.data.Good;
-import pt.ulisboa.tecnico.sec.client.library.data.Transaction;
-import pt.ulisboa.tecnico.sec.client.library.exceptions.GoodWrongOwner;
-import pt.ulisboa.tecnico.sec.client.library.exceptions.InvalidRequestNumberException;
-import pt.ulisboa.tecnico.sec.client.library.exceptions.InvalidSignatureException;
-import pt.ulisboa.tecnico.sec.client.library.exceptions.ServerException;
-import pt.ulisboa.tecnico.sec.client.library.interfaces.server.HdsNotaryService;
-import pt.ulisboa.tecnico.sec.client.server.HdsNotaryApplication;
+import pt.ulisboa.tecnico.sec.library.HdsProperties;
+import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.library.data.Good;
+import pt.ulisboa.tecnico.sec.library.data.Transaction;
+import pt.ulisboa.tecnico.sec.library.exceptions.GoodWrongOwnerException;
+import pt.ulisboa.tecnico.sec.library.exceptions.InvalidRequestNumberException;
+import pt.ulisboa.tecnico.sec.library.exceptions.InvalidSignatureException;
+import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
+import pt.ulisboa.tecnico.sec.library.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.server.HdsNotaryApplication;
+import pt.ulisboa.tecnico.sec.server.client.ClientApplication;
 
 /**
  * Unit test for ServerServiceTest.
@@ -108,7 +108,7 @@ public class ServerServiceTest {
         Assert.assertTrue(success);
     }
 
-    @Test(expected = GoodWrongOwner.class)
+    @Test(expected = GoodWrongOwnerException.class)
     public void testNOkWrongOwnerIntentionToSell()
         throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String userId = "0";
@@ -225,7 +225,7 @@ public class ServerServiceTest {
             transactionRequest2.getTransactionId());
     }
 
-    @Test(expected = GoodWrongOwner.class)
+    @Test(expected = GoodWrongOwnerException.class)
     public void testNOkWrongOwnerIntentionToBuy()
         throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String userId = "0";
