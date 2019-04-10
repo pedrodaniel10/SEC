@@ -30,9 +30,9 @@ public class HdsNotaryTest {
 
     @Before
     public void setup() throws UserNotFoundException {
-        alicePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("alice"));
-        bobPrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("bob"));
-        charliePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("charlie"));
+        alicePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("alice"), "password");
+        bobPrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("bob"), "password");
+        charliePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("charlie"), "password");
 
         final HdsNotaryState serverState = PersistenceUtils.getServerState();
         alicePublicKey = serverState.getUserById("0").getPublicKey();

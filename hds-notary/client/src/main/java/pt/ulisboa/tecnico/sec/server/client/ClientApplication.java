@@ -43,6 +43,12 @@ public class ClientApplication {
             username = new Scanner(System.in).nextLine();
         }
 
+        String password = System.getProperty("password");
+        if (password == null) {
+            logger.error(new IllegalArgumentException("Run with -Dpassword=<password>"));
+            System.exit(1);
+        }
+
         // Get user
         User user = null;
         try {
@@ -53,7 +59,7 @@ public class ClientApplication {
         }
 
         // Get private key
-        privateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey(user.getName()));
+        privateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey(user.getName()), password);
 
         try {
             hdsNotaryService = (HdsNotaryService) Naming.lookup(HdsProperties.getServerUri());
@@ -76,7 +82,7 @@ public class ClientApplication {
                 System.out.println("4) Exit.");
                 System.out.println("==========================================");
 
-                int requestNumber = hdsNotaryService.getRequestNumber(user.getUserId());
+                String nonce = hdsNotaryService.getNonce(user.getUserId());
 
                 String option = new Scanner(System.in).nextLine();
                 try {
@@ -85,10 +91,10 @@ public class ClientApplication {
                             getStateOfGood();
                             break;
                         case "2":
-                            intentionToSell(user, requestNumber);
+                            intentionToSell(user, nonce);
                             break;
                         case "3":
-                            buyGood(user, requestNumber);
+                            buyGood(user, nonce);
                             break;
                         case "4":
                             System.exit(1);
@@ -106,7 +112,7 @@ public class ClientApplication {
         }
     }
 
-    private static void buyGood(User user, int requestNumber)
+    private static void buyGood(User user, String nonce)
         throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException,
         SignatureException, NotBoundException, MalformedURLException {
 
@@ -121,12 +127,12 @@ public class ClientApplication {
         // Intention to buy
         byte[] signature =
             CryptoUtils.makeDigitalSignature(privateKey, good.getOwnerId(), user.getUserId(),
-                good.getGoodId(), String.valueOf(requestNumber));
+                good.getGoodId(), nonce);
 
         final Transaction transactionRequest = hdsNotaryService.intentionToBuy(good.getOwnerId(),
             user.getUserId(),
             good.getGoodId(),
-            requestNumber,
+            nonce,
             signature);
         ClientService clientServiceSeller =
             (ClientService) Naming.lookup(HdsProperties.getClientUri(good.getOwnerId()));
@@ -152,7 +158,7 @@ public class ClientApplication {
         System.out.println("Buyer Signature: " + new String(transaction.getBuyerSignature()));
     }
 
-    private static void intentionToSell(User user, int requestNumber)
+    private static void intentionToSell(User user, String nonce)
         throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, RemoteException,
         ServerException {
 
@@ -160,9 +166,9 @@ public class ClientApplication {
         String goodId = new Scanner(System.in).nextLine();
         byte[] signature =
             CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId,
-                String.valueOf(requestNumber));
+                nonce);
 
-        if (hdsNotaryService.intentionToSell(user.getUserId(), goodId, requestNumber, signature)) {
+        if (hdsNotaryService.intentionToSell(user.getUserId(), goodId, nonce, signature)) {
             System.out.println("The request was successful.");
         }
     }

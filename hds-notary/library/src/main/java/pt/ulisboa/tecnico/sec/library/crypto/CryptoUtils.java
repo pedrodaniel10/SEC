@@ -1,19 +1,32 @@
 package pt.ulisboa.tecnico.sec.library.crypto;
 
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.KeyFactory;
 import java.security.Signature;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.UUID;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
+
+import javax.crypto.SecretKey;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public final class CryptoUtils {
 
@@ -23,24 +36,36 @@ public final class CryptoUtils {
      * Digital signature algorithm.
      */
     private static final String SIGNATURE_ALGO = "SHA256withRSA";
+    private static final String PASSWORD_ALGO = "PBKDF2WithHmacSHA512";
+    private static final String SYM_CIPHER = "AES/CBC/PKCS5Padding";
+
+    private static final int ITERATION_COUNT = 40000;
 
     private CryptoUtils() {
+    }
+
+    public static String generateNonce() {
+        return UUID.randomUUID().toString();
     }
 
     /**
      * Decodes the key into RSAPrivateKey
      *
      * @param key encoded key.
+     * @param password password to encrypt the keys
      * @return the RSAPrivateKey decoded key.
      */
-    public static RSAPrivateKey getPrivateKey(String key) {
+    public static RSAPrivateKey getPrivateKey(String key, String password) {
         try {
-            byte[] encoded = Base64.decodeBase64(key);
+            SecretKeySpec secretKey = createSecretKey(password);
+            String decryptedKey = decryptPrivateKey(key, secretKey);
+            byte[] encoded = Base64.decodeBase64(decryptedKey);
             KeyFactory kf = KeyFactory.getInstance("RSA");
             PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
             return (RSAPrivateKey) kf.generatePrivate(keySpec);
 
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException | InvalidKeyException
+                | BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException e) {
             logger.error(e);
         }
         return null;
@@ -84,7 +109,7 @@ public final class CryptoUtils {
      * @param plainText the plain text
      */
     public static boolean verifyDigitalSignature(PublicKey publicKey, byte[] cipherDigest,
-        String... plainText) {
+                                                 String... plainText) {
         String messageConcat = String.join("", plainText);
         return CryptoUtils
             .verifyDigitalSignature(cipherDigest, messageConcat.getBytes(), publicKey);
@@ -125,5 +150,72 @@ public final class CryptoUtils {
         sig.initSign(privatekey);
         sig.update(bytes);
         return sig.sign();
+    }
+
+    /**
+     * Creates the secret key derived from the privatekey stored in the file
+     *
+     * @param password password used to encrypt the privatekey
+     * @return
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeySpecException
+     */
+    public static SecretKeySpec createSecretKey (String password)
+            throws NoSuchAlgorithmException, InvalidKeySpecException {
+
+        byte[] salt = "N4V1fQkbwYKDL5bn".getBytes();
+
+        /* Generate secret key derived from password */
+        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(PASSWORD_ALGO);
+        PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, ITERATION_COUNT, 256);
+        SecretKey secretKey = keyFactory.generateSecret(keySpec);
+
+        /* Encode the secret key into a AES key */
+        return new SecretKeySpec(secretKey.getEncoded(), "AES");
+    }
+
+    /**
+     * Decrypts the stored private key with a secret key
+     *
+     * @param encryptedKey stored private key
+     * @param secretKey used to encrypt the key
+     * @return
+     * @throws NoSuchPaddingException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws BadPaddingException
+     * @throws IllegalBlockSizeException
+     * @throws InvalidAlgorithmParameterException
+     */
+    public static String decryptPrivateKey(String encryptedKey, SecretKeySpec secretKey)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
+            BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+
+        byte[] encodedKey = Base64.decodeBase64(encryptedKey);
+        Cipher cipher = Cipher.getInstance(SYM_CIPHER);
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }));
+        return new String(cipher.doFinal(encodedKey));
+    }
+
+    /**
+     *
+     * @param decryptedKey plain key
+     * @param secretKey used to encrypt the key
+     * @return
+     * @throws NoSuchPaddingException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws BadPaddingException
+     * @throws IllegalBlockSizeException
+     * @throws InvalidAlgorithmParameterException
+     */
+    public static String encryptPrivateKey(String decryptedKey, SecretKeySpec secretKey)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
+            BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+
+        Cipher cipher = Cipher.getInstance(SYM_CIPHER);
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }));
+        byte[] encryptedKey = cipher.doFinal(decryptedKey.getBytes());
+        return Base64.encodeBase64String(encryptedKey);
     }
 }

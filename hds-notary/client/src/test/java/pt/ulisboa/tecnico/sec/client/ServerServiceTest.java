@@ -16,7 +16,7 @@ import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
 import pt.ulisboa.tecnico.sec.library.data.Good;
 import pt.ulisboa.tecnico.sec.library.data.Transaction;
 import pt.ulisboa.tecnico.sec.library.exceptions.GoodWrongOwnerException;
-import pt.ulisboa.tecnico.sec.library.exceptions.InvalidRequestNumberException;
+import pt.ulisboa.tecnico.sec.library.exceptions.InvalidNonceException;
 import pt.ulisboa.tecnico.sec.library.exceptions.InvalidSignatureException;
 import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.library.interfaces.server.HdsNotaryService;
@@ -39,13 +39,13 @@ public class ServerServiceTest {
         throws RemoteException, NotBoundException, MalformedURLException {
         new Thread(() -> HdsNotaryApplication.main(new String[]{})).start();
 
-        new Thread(() -> ClientApplication.main(new String[]{"alice"})).start();
-        new Thread(() -> ClientApplication.main(new String[]{"bob"})).start();
-        new Thread(() -> ClientApplication.main(new String[]{"charlie"})).start();
+        new Thread(() -> ClientApplication.main(new String[]{"alice", "-Dpassword=password"})).start();
+        new Thread(() -> ClientApplication.main(new String[]{"bob", "-Dpassword=password"})).start();
+        new Thread(() -> ClientApplication.main(new String[]{"charlie", "-Dpassword=password"})).start();
 
-        alicePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("alice"));
-        bobPrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("bob"));
-        charliePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("charlie"));
+        alicePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("alice"), "password");
+        bobPrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("bob"), "password");
+        charliePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("charlie"), "password");
 
         hdsNotaryService = (HdsNotaryService) Naming.lookup(HdsProperties.getServerUri());
     }
@@ -81,11 +81,11 @@ public class ServerServiceTest {
         throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String userId = "0";
         String goodId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
-        boolean success = hdsNotaryService.intentionToSell(userId, goodId, requestNumber,
+        boolean success = hdsNotaryService.intentionToSell(userId, goodId, nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
         Assert.assertTrue(success);
     }
 
@@ -94,17 +94,17 @@ public class ServerServiceTest {
         throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String userId = "0";
         String goodId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
-        boolean success = hdsNotaryService.intentionToSell(userId, goodId, requestNumber,
+        boolean success = hdsNotaryService.intentionToSell(userId, goodId, nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
         Assert.assertTrue(success);
 
-        requestNumber = hdsNotaryService.getRequestNumber(userId);
-        success = hdsNotaryService.intentionToSell(userId, goodId, requestNumber,
+        nonce = hdsNotaryService.getNonce(userId);
+        success = hdsNotaryService.intentionToSell(userId, goodId, nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
         Assert.assertTrue(success);
     }
 
@@ -114,11 +114,11 @@ public class ServerServiceTest {
         String userId = "0";
         String goodId = "0";
 
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, goodId, requestNumber,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
     }
 
     @Test(expected = InvalidSignatureException.class)
@@ -127,11 +127,11 @@ public class ServerServiceTest {
         String userId = "0";
         String goodId = "1";
 
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, goodId, requestNumber,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce,
             CryptoUtils.makeDigitalSignature(bobPrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
     }
 
     @Test(expected = InvalidSignatureException.class)
@@ -140,11 +140,11 @@ public class ServerServiceTest {
         String userId = "1";
         String goodId = "1";
 
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, goodId, requestNumber,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
     }
 
     @Test(expected = InvalidSignatureException.class)
@@ -153,27 +153,27 @@ public class ServerServiceTest {
         String userId = "0";
         String goodId = "0";
 
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, "different", requestNumber,
+        hdsNotaryService.intentionToSell(userId, "different", nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
     }
 
-    @Test(expected = InvalidRequestNumberException.class)
+    @Test(expected = InvalidNonceException.class)
     public void testNOkReplayAttackIntentionToSell()
         throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String userId = "0";
         String goodId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, goodId, requestNumber,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
 
-        hdsNotaryService.intentionToSell(userId, goodId, requestNumber,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, String.valueOf(requestNumber)));
+                userId, goodId, nonce));
     }
 
     // IntentionToBuy
@@ -183,14 +183,14 @@ public class ServerServiceTest {
         String userId = "0";
         String goodId = "2";
         String ownerId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
         final Transaction transactionRequest = hdsNotaryService.intentionToBuy(ownerId,
             userId,
             goodId,
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
 
         Assert.assertNotNull(transactionRequest);
     }
@@ -201,24 +201,24 @@ public class ServerServiceTest {
         String userId = "0";
         String goodId = "2";
         String ownerId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
         Transaction transactionRequest = hdsNotaryService.intentionToBuy(ownerId,
             userId,
             goodId,
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
 
         Assert.assertNotNull(transactionRequest);
 
-        requestNumber = hdsNotaryService.getRequestNumber(userId);
+        nonce = hdsNotaryService.getNonce(userId);
         Transaction transactionRequest2 = hdsNotaryService.intentionToBuy(ownerId,
             userId,
             goodId,
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
 
         Assert.assertNotNull(transactionRequest2);
         Assert.assertEquals(transactionRequest.getTransactionId(),
@@ -231,14 +231,14 @@ public class ServerServiceTest {
         String userId = "0";
         String goodId = "2";
         String ownerId = "2";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
         hdsNotaryService.intentionToBuy(ownerId,
             userId,
             goodId,
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
     }
 
     @Test(expected = InvalidSignatureException.class)
@@ -247,14 +247,14 @@ public class ServerServiceTest {
         String userId = "0";
         String goodId = "2";
         String ownerId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
         hdsNotaryService.intentionToBuy(ownerId,
             userId,
             goodId,
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(bobPrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
     }
 
     @Test(expected = InvalidSignatureException.class)
@@ -263,14 +263,14 @@ public class ServerServiceTest {
         String userId = "2";
         String goodId = "2";
         String ownerId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
         hdsNotaryService.intentionToBuy(ownerId,
             userId,
             goodId,
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
     }
 
     @Test(expected = InvalidSignatureException.class)
@@ -279,37 +279,37 @@ public class ServerServiceTest {
         String userId = "0";
         String goodId = "2";
         String ownerId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
         hdsNotaryService.intentionToBuy(ownerId,
             userId,
             "different",
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
     }
 
-    @Test(expected = InvalidRequestNumberException.class)
+    @Test(expected = InvalidNonceException.class)
     public void testNOkReplayAttackIntentionToBuy()
         throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String userId = "0";
         String goodId = "2";
         String ownerId = "1";
-        int requestNumber = hdsNotaryService.getRequestNumber(userId);
+        String nonce = hdsNotaryService.getNonce(userId);
 
         hdsNotaryService.intentionToBuy(ownerId,
             userId,
             goodId,
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
 
         hdsNotaryService.intentionToBuy(ownerId,
             userId,
             goodId,
-            requestNumber,
+            nonce,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
-                goodId, String.valueOf(requestNumber)));
+                goodId, nonce));
     }
 
     // TODO: Transaction tests with citizen card.

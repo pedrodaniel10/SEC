@@ -27,24 +27,24 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
 
 
     @Override
-    public int getRequestNumber(String userId) throws ServerException {
-        return serverState.getRequestNumber(userId);
+    public String getNonce(String userId) throws ServerException {
+        return serverState.getNonce(userId);
     }
 
     @Override
-    public boolean intentionToSell(String sellerId, String goodId, int requestNumber,
-        byte[] signature)
+    public boolean intentionToSell(String sellerId, String goodId, String nonce,
+                                   byte[] signature)
         throws ServerException {
-        return this.serverState.intentionToSell(sellerId, goodId, requestNumber, signature);
+        return this.serverState.intentionToSell(sellerId, goodId, nonce, signature);
     }
 
     @Override
     public Transaction intentionToBuy(String sellerId,
-        String buyerId,
-        String goodId,
-        int requestNumber,
-        byte[] signature) throws RemoteException, ServerException {
-        return this.serverState.intentionToBuy(sellerId, buyerId, goodId, requestNumber, signature);
+                                      String buyerId,
+                                      String goodId,
+                                      String nonce,
+                                      byte[] signature) throws RemoteException, ServerException {
+        return this.serverState.intentionToBuy(sellerId, buyerId, goodId, nonce, signature);
     }
 
     @Override

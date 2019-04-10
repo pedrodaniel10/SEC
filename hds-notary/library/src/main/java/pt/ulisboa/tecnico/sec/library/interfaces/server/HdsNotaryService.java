@@ -11,13 +11,13 @@ import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
  */
 public interface HdsNotaryService extends Remote {
 
-    int getRequestNumber(String userId) throws RemoteException, ServerException;
+    String getNonce(String userId) throws RemoteException, ServerException;
 
-    boolean intentionToSell(String sellerId, String goodId, int requestNumber, byte[] signature)
+    boolean intentionToSell(String sellerId, String goodId, String nonce, byte[] signature)
         throws RemoteException, ServerException;
 
-    Transaction intentionToBuy(String sellerId, String buyerId, String goodId, int requestNumber,
-        byte[] signature)
+    Transaction intentionToBuy(String sellerId, String buyerId, String goodId, String nonce,
+                               byte[] signature)
         throws RemoteException, ServerException;
 
     Good getStateOfGood(String goodId) throws RemoteException, ServerException;

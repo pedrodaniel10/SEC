@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.server.services.HdsNotaryState;
 
 /**

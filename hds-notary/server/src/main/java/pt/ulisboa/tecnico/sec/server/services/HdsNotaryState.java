@@ -15,7 +15,7 @@ import pt.ulisboa.tecnico.sec.library.data.User;
 import pt.ulisboa.tecnico.sec.library.exceptions.GoodIsNotOnSaleException;
 import pt.ulisboa.tecnico.sec.library.exceptions.GoodNotFoundException;
 import pt.ulisboa.tecnico.sec.library.exceptions.GoodWrongOwnerException;
-import pt.ulisboa.tecnico.sec.library.exceptions.InvalidRequestNumberException;
+import pt.ulisboa.tecnico.sec.library.exceptions.InvalidNonceException;
 import pt.ulisboa.tecnico.sec.library.exceptions.InvalidSignatureException;
 import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.library.exceptions.TransactionDoesntExistsException;
@@ -28,6 +28,7 @@ import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
  */
 public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
+
     private Map<String, Transaction> transactions = new ConcurrentHashMap<>();
     private Map<String, User> users = new ConcurrentHashMap<>();
     private Map<String, Good> goods = new ConcurrentHashMap<>();
@@ -38,8 +39,8 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
     }
 
     @Override
-    public int getRequestNumber(String userId) throws ServerException {
-        return getUserById(userId).getRequestNumber();
+    public String getNonce(String userId) throws ServerException {
+        return getUserById(userId).getNonce();
     }
 
 
@@ -48,30 +49,30 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
      *
      * @param sellerId the userId of the seller.
      * @param goodId the id of the good.
-     * @param requestNumber the server request number.
+     * @param nonce the server nonce.
      * @param signature the signature of the parameters.
      * @return true if no error occurs.
      * @throws GoodNotFoundException if the good doesn't exist.
      * @throws GoodWrongOwnerException if the good doesn't belong to the provided sellerId.
      */
     @Override
-    public boolean intentionToSell(String sellerId, String goodId, int requestNumber,
-        byte[] signature)
-        throws GoodNotFoundException, GoodWrongOwnerException, UserNotFoundException, InvalidRequestNumberException,
+    public boolean intentionToSell(String sellerId, String goodId, String nonce,
+                                   byte[] signature)
+        throws GoodNotFoundException, GoodWrongOwnerException, UserNotFoundException, InvalidNonceException,
         InvalidSignatureException {
 
         User user = getUserById(sellerId);
 
         // Verify Signature
         if (!CryptoUtils.verifyDigitalSignature(user.getPublicKey(), signature,
-            sellerId, goodId, String.valueOf(requestNumber))) {
+            sellerId, goodId, nonce)) {
             throw new InvalidSignatureException(
                 "Seller with id " + sellerId + " has signature invalid.");
         }
 
-        // Verify requestNumber
-        if (requestNumber != user.getRequestNumber()) {
-            throw new InvalidRequestNumberException("IntentionToSell: Wrong request number.");
+        // Verify nonce
+        if (!StringUtils.equals(nonce,user.getNonce())) {
+            throw new InvalidNonceException("IntentionToSell: Wrong request number.");
         }
 
         Good good = this.getStateOfGood(goodId);
@@ -82,7 +83,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         }
 
         good.setOnSale(true);
-        user.incrementRequestNumber();
+        user.generateNonce();
 
         // Save State
         PersistenceUtils.save();
@@ -96,7 +97,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
      * @param sellerId the userId of the seller.
      * @param buyerId the userId of the buyer.
      * @param goodId the id of the good.
-     * @param requestNumber the server request number.
+     * @param nonce the server nonce.
      * @param signature the signature of the parameters.
      * @return The pending transaction.
      * @throws GoodNotFoundException if the good doesn't exist.
@@ -105,25 +106,25 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
      */
     @Override
     public Transaction intentionToBuy(String sellerId,
-        String buyerId,
-        String goodId,
-        int requestNumber,
-        byte[] signature)
+                                      String buyerId,
+                                      String goodId,
+                                      String nonce,
+                                      byte[] signature)
         throws GoodNotFoundException, GoodIsNotOnSaleException, GoodWrongOwnerException, UserNotFoundException,
-        InvalidSignatureException, InvalidRequestNumberException {
+        InvalidSignatureException, InvalidNonceException {
 
         User user = getUserById(buyerId);
 
         // Verify Signature
         if (!CryptoUtils
             .verifyDigitalSignature(user.getPublicKey(), signature,
-                sellerId, buyerId, goodId, String.valueOf(requestNumber))) {
+                sellerId, buyerId, goodId, nonce)) {
             throw new InvalidSignatureException("IntentionToBuy: Signature is invalid.");
         }
 
-        // Verify requestNumber
-        if (requestNumber != user.getRequestNumber()) {
-            throw new InvalidRequestNumberException("Wrong request number.");
+        // Verify nonce
+        if (!StringUtils.equals(nonce,user.getNonce())) {
+            throw new InvalidNonceException("Wrong request number.");
         }
         Good good = this.getStateOfGood(goodId);
 
@@ -138,7 +139,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // It already exists, just return
         if (transaction.isPresent()) {
-            user.incrementRequestNumber();
+            user.generateNonce();
             return transaction.get();
         }
 
@@ -147,7 +148,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         Transaction newTransaction = new Transaction(transactionId, sellerId, buyerId, goodId);
         pendingGoodTransactions.add(newTransaction);
 
-        user.incrementRequestNumber();
+        user.generateNonce();
 
         // Save State
         PersistenceUtils.save();
