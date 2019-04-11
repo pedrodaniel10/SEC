@@ -11,6 +11,7 @@ public class Transaction implements Serializable {
 
     private byte[] sellerSignature;
     private byte[] buyerSignature;
+    private byte[] notarySignature;
 
     public Transaction() {
     }
@@ -68,5 +69,13 @@ public class Transaction implements Serializable {
 
     public void setBuyerSignature(byte[] buyerSignature) {
         this.buyerSignature = buyerSignature;
+    }
+
+    public byte[] getNotarySignature() {
+        return notarySignature;
+    }
+
+    public void setNotarySignature(byte[] notarySignature) {
+        this.notarySignature = notarySignature;
     }
 }

@@ -7,6 +7,8 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.interfaces.RSAPrivateKey;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
 import pt.ulisboa.tecnico.sec.library.data.Transaction;
 import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
@@ -27,10 +29,10 @@ public class ClientServiceImpl extends UnicastRemoteObject implements ClientServ
 
     @Override
     public Transaction buy(String transactionId,
-        String sellerId,
-        String buyerId,
-        String goodId,
-        byte[] buyerSignature)
+                                                  String sellerId,
+                                                  String buyerId,
+                                                  String goodId,
+                                                  byte[] buyerSignature)
         throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
 
         byte[] signature = CryptoUtils

@@ -49,7 +49,7 @@ public final class CryptoUtils {
     }
 
     /**
-     * Decodes the key into RSAPrivateKey
+     * Decodes the plain key into RSAPrivateKey using key derivation (password-based)
      *
      * @param key encoded key.
      * @param password password to encrypt the keys
@@ -59,13 +59,29 @@ public final class CryptoUtils {
         try {
             SecretKeySpec secretKey = createSecretKey(password);
             String decryptedKey = decryptPrivateKey(key, secretKey);
-            byte[] encoded = Base64.decodeBase64(decryptedKey);
+            return getPrivateKey(decryptedKey);
+
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException | InvalidKeyException
+                | BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException e) {
+            logger.error(e);
+        }
+        return null;
+    }
+
+    /**
+     * Decodes the key into RSAPrivateKey
+     *
+     * @param key encoded key.
+     * @return the RSAPrivateKey decoded key.
+     */
+    public static RSAPrivateKey getPrivateKey(String key) {
+        try {
+            byte[] encoded = Base64.decodeBase64(key);
             KeyFactory kf = KeyFactory.getInstance("RSA");
             PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
             return (RSAPrivateKey) kf.generatePrivate(keySpec);
 
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException | InvalidKeyException
-                | BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             logger.error(e);
         }
         return null;
