@@ -18,7 +18,7 @@ public class GoodIsNotOnSaleException extends ServerException {
     }
 
     public GoodIsNotOnSaleException(String message, Throwable cause, boolean enableSuppression,
-        boolean writableStackTrace) {
+                                    boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

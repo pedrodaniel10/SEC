@@ -1,20 +1,5 @@
 package pt.ulisboa.tecnico.sec.server.client;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
-import java.net.MalformedURLException;
-import java.rmi.Naming;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.SignatureException;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
-import java.util.Scanner;
-
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.library.HdsProperties;
@@ -29,6 +14,20 @@ import pt.ulisboa.tecnico.sec.library.interfaces.client.ClientService;
 import pt.ulisboa.tecnico.sec.library.interfaces.server.HdsNotaryService;
 import pt.ulisboa.tecnico.sec.server.client.services.ClientServiceImpl;
 
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.SignatureException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.util.Scanner;
+
 /**
  * ClientApplication main class
  */
@@ -38,7 +37,7 @@ public class ClientApplication {
 
     private static RSAPrivateKey privateKey;
     private static RSAPublicKey serverPublicKey;
-    private static RSAPublicKey notaryPublicKey;
+    private static PublicKey notaryPublicKey;
 
     private static HdsNotaryService hdsNotaryService;
 
@@ -67,6 +66,7 @@ public class ClientApplication {
         //Get Server Public Key
         serverPublicKey = CryptoUtils.getPublicKey(HdsProperties.getServerPublicKey());
 
+
         // Get private key
         privateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey(user.getName()), password);
 
@@ -83,7 +83,14 @@ public class ClientApplication {
 
             logger.info("ClientService up at port " + registryPort);
 
-            //notaryPublicKey = hdsNotaryService.getNotaryPublicKey();
+
+            ImmutablePair<PublicKey, byte[]> requestNotaryKey = hdsNotaryService.getNotaryPublicKey();
+            notaryPublicKey = requestNotaryKey.getLeft();
+
+            if (!CryptoUtils.verifyDigitalSignature(serverPublicKey, requestNotaryKey.getRight(), new String(notaryPublicKey.getEncoded()))) {
+                logger.error("Notary Public Key signature doesn't match.");
+                System.exit(1);
+            }
 
             while (true) {
                 System.out.println("HDS Notary Service =======================");
@@ -118,14 +125,14 @@ public class ClientApplication {
                 }
             }
 
-        } catch (NotBoundException | MalformedURLException | RemoteException | ServerException e) {
+        } catch (NotBoundException | MalformedURLException | RemoteException | ServerException | NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             logger.error(e);
         }
     }
 
     private static void buyGood(User user, String nonce)
-        throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException,
-               SignatureException, NotBoundException, MalformedURLException {
+            throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException,
+            SignatureException, NotBoundException, MalformedURLException {
 
         //Get State of Good
         System.out.print("Enter goodId to buy: ");
@@ -133,15 +140,15 @@ public class ClientApplication {
         byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
 
         ImmutablePair<Good, byte[]> response = hdsNotaryService.getStateOfGood(user.getUserId(), goodId, nonce,
-            signature);
+                signature);
 
         Good good = response.getLeft();
 
         // Verify Signature
         if (!CryptoUtils.verifyDigitalSignature(serverPublicKey, response.getRight(),
-            goodId, Boolean.toString(good.isOnSale()), nonce)) {
+                goodId, Boolean.toString(good.isOnSale()), nonce)) {
             throw new InvalidSignatureException(
-                "Server has signature invalid.");
+                    "Server has signature invalid.");
         }
 
         if (!good.isOnSale()) {
@@ -152,47 +159,48 @@ public class ClientApplication {
         // Intention to buy
         nonce = hdsNotaryService.getNonce(user.getUserId());
         signature = CryptoUtils.makeDigitalSignature(privateKey, good.getOwnerId(), user.getUserId(),
-            good.getGoodId(), nonce);
+                good.getGoodId(), nonce);
 
         final Transaction transactionResponse = hdsNotaryService.intentionToBuy(
-            good.getOwnerId(),
-            user.getUserId(),
-            good.getGoodId(),
-            nonce,
-            signature);
+                good.getOwnerId(),
+                user.getUserId(),
+                good.getGoodId(),
+                nonce,
+                signature);
 
         // Verify Signature
         if (!CryptoUtils.verifyDigitalSignature(serverPublicKey, transactionResponse.getNotarySignature(),
-            transactionResponse.getTransactionId(), nonce)) {
+                transactionResponse.getTransactionId(), nonce)) {
             throw new InvalidSignatureException(
-                "IntentionToBuy: Server has signature invalid.");
+                    "IntentionToBuy: Server has signature invalid.");
         }
 
         // Buy good
         ClientService clientServiceSeller =
-            (ClientService) Naming.lookup(HdsProperties.getClientUri(good.getOwnerId()));
+                (ClientService) Naming.lookup(HdsProperties.getClientUri(good.getOwnerId()));
 
         signature = CryptoUtils.makeDigitalSignature(privateKey,
-            transactionResponse.getTransactionId(),
-            transactionResponse.getSellerId(),
-            transactionResponse.getBuyerId(),
-            transactionResponse.getGoodId());
+                transactionResponse.getTransactionId(),
+                transactionResponse.getSellerId(),
+                transactionResponse.getBuyerId(),
+                transactionResponse.getGoodId());
 
         Transaction transaction = clientServiceSeller.buy(
-            transactionResponse.getTransactionId(),
-            transactionResponse.getSellerId(),
-            transactionResponse.getBuyerId(),
-            transactionResponse.getGoodId(),
-            signature);
+                transactionResponse.getTransactionId(),
+                transactionResponse.getSellerId(),
+                transactionResponse.getBuyerId(),
+                transactionResponse.getGoodId(),
+                signature);
 
         // Verify Signature
-        if (!CryptoUtils.verifyDigitalSignature(serverPublicKey, transaction.getNotarySignature(),
-            transaction.getTransactionId(),
-            transaction.getSellerId(), transaction.getBuyerId(), new String(transaction.getSellerSignature()),
-            new String(transaction.getBuyerSignature()))) {
+        if (!CryptoUtils.verifyDigitalSignature(notaryPublicKey, transaction.getNotarySignature(),
+                transaction.getTransactionId(),
+                transaction.getSellerId(), transaction.getBuyerId(), new String(transaction.getSellerSignature()),
+                new String(transaction.getBuyerSignature()))) {
             throw new InvalidSignatureException(
-                "BuyGood: Seller has signature invalid.");
+                    "BuyGood: Seller has signature invalid.");
         }
+
 
         System.out.println("Good with id " + goodId + " bought!");
         System.out.println("Transaction Id: " + transaction.getTransactionId());
@@ -204,23 +212,23 @@ public class ClientApplication {
     }
 
     private static void intentionToSell(User user, String nonce)
-        throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, RemoteException,
-               ServerException {
+            throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, RemoteException,
+            ServerException {
 
         System.out.print("Enter goodId to sell: ");
         String goodId = new Scanner(System.in).nextLine();
         byte[] signature =
-            CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId,
-                nonce);
+                CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId,
+                        nonce);
 
         ImmutablePair<Boolean, byte[]> response = hdsNotaryService.intentionToSell(user.getUserId(), goodId, nonce,
-            signature);
+                signature);
 
         // Verify Signature
         if (!CryptoUtils.verifyDigitalSignature(serverPublicKey, response.getRight(), goodId,
-            Boolean.toString(response.getLeft()), nonce)) {
+                Boolean.toString(response.getLeft()), nonce)) {
             throw new InvalidSignatureException(
-                "Server has signature invalid.");
+                    "Server has signature invalid.");
         }
 
         if (response.getLeft()) {
@@ -229,19 +237,19 @@ public class ClientApplication {
     }
 
     private static void getStateOfGood(User user, String nonce)
-        throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+            throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
 
         System.out.print("Enter goodId: ");
         String goodId = new Scanner(System.in).nextLine();
         byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
 
         ImmutablePair<Good, byte[]> response = hdsNotaryService.getStateOfGood(user.getUserId(), goodId, nonce,
-            signature);
+                signature);
         Good good = response.getLeft();
 
         // Verify Signature
         if (!CryptoUtils.verifyDigitalSignature(serverPublicKey, response.getRight(), goodId,
-            Boolean.toString(good.isOnSale()), nonce)) {
+                Boolean.toString(good.isOnSale()), nonce)) {
             throw new InvalidSignatureException("Server has signature invalid.");
         }
 

@@ -1,14 +1,14 @@
 package pt.ulisboa.tecnico.sec.server.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
-import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.server.services.HdsNotaryState;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
 
 /**
  * Class that handles the persistent data.
@@ -52,6 +52,7 @@ public final class PersistenceUtils {
             serverState = mapper.readValue(dataFile, HdsNotaryState.class);
         } catch (IOException e) {
             // File might be corrupted, try to load backup file
+            e.printStackTrace();
             logger.error(e);
             try {
                 serverState = mapper.readValue(dataBackupFile, HdsNotaryState.class);
@@ -69,7 +70,7 @@ public final class PersistenceUtils {
 
         try {
             String jsonInString = mapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(serverState);
+                    .writeValueAsString(serverState);
 
             FileUtils.writeStringToFile(dataFile, jsonInString, (String) null);
             FileUtils.writeStringToFile(dataBackupFile, jsonInString, (String) null);
