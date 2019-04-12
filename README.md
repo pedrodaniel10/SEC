@@ -2,10 +2,14 @@
 Highly Dependable Systems Project - HDS Notary
 
 ## Requirements
-You must have installed the following tools:
+You must have the following tools:
 
+- GNU/Linux
+- Smart Card reader
+- Middleware PT-CC
 - Maven 3.x.x
 - Java Development Kit 8 (JDK 8) 164+
+
 
 Also check if JAVA_HOME and M2_HOME are set properly.
 
@@ -24,17 +28,25 @@ To compile just run the command in the directory **/hds-notary/**:
 as the class loaders don't yet exist at this point.
 
 ## How to run tests
-To run tests, you need first to compile as explained in the previous section, to run the tests
-simply execute the command
+To run tests, you need first to compile as explained in the previous section, and setup the server and 2 clients (Alice and Bob).
+
+## Server
+Start the server in folder **/server/**:
 ```
-    mvn test
-```
-Running this command, all tests should pass.
-If the tests fail due to _Connection refused_, you must set up the server.
-Open a new tab and execute the following commands before running the tests
-```
-    cd server
     mvn exec:java
+```
+
+## Client Alice
+Start the client Alice:
+```
+    mvn exec:java -Dexec.args="alice Uvv1j7a60q2q0a4"
+```
+
+
+## Client Bob
+Start the client Bob:
+```
+    mvn exec:java -Dexec.args="bob JNTpC0SE9Hzb3SG"
 ```
 
 ## Passwords for the users
@@ -43,3 +55,4 @@ Open a new tab and execute the following commands before running the tests
 | alice         | Uvv1j7a60q2q0a4 |
 | bob           | JNTpC0SE9Hzb3SG |   
 | charlie       | 9QrKUNt9HAXPKG9 |   
+| server        | admin           |   

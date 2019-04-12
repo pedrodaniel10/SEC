@@ -1,13 +1,12 @@
 package pt.ulisboa.tecnico.sec.library;
 
+import java.io.IOException;
+import java.util.Properties;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.library.data.User;
 import pt.ulisboa.tecnico.sec.library.exceptions.UserNotFoundException;
-
-import java.io.IOException;
-import java.util.Properties;
 
 public final class HdsProperties {
 

@@ -1,19 +1,30 @@
 package pt.ulisboa.tecnico.sec.library.crypto;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
-
-import javax.crypto.*;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
-import java.security.*;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.UUID;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.log4j.Logger;
 
 public final class CryptoUtils {
 
@@ -26,8 +37,8 @@ public final class CryptoUtils {
     private static final String PASSWORD_ALGO = "PBKDF2WithHmacSHA512";
     private static final String SYM_CIPHER = "AES/CBC/PKCS5Padding";
     private static final IvParameterSpec IV = new IvParameterSpec(
-            new byte[]{0x59, (byte) 0xee, 0x74, 0x00, 0x0a, (byte) 0xe1, (byte) 0xe9, 0x16, (byte) 0xb0, (byte) 0xaa, 0x00,
-                    (byte) 0x81, (byte) 0xd2, 0x33, (byte) 0xc3, 0x3a});
+        new byte[]{0x59, (byte) 0xee, 0x74, 0x00, 0x0a, (byte) 0xe1, (byte) 0xe9, 0x16, (byte) 0xb0, (byte) 0xaa, 0x00,
+            (byte) 0x81, (byte) 0xd2, 0x33, (byte) 0xc3, 0x3a});
     private static final String SALT = "N4V1fQkbwYKDL5bn";
 
     private static final int ITERATION_COUNT = 40000;
@@ -53,7 +64,7 @@ public final class CryptoUtils {
             return getPrivateKey(decryptedKey);
 
         } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException | InvalidKeyException
-                | BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException e) {
+            | BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException e) {
             logger.error(e);
         }
         return null;
@@ -103,7 +114,7 @@ public final class CryptoUtils {
      * @param message    the message in order
      */
     public static byte[] makeDigitalSignature(PrivateKey privatekey, String... message)
-            throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String messageConcat = String.join("", message);
         return CryptoUtils.makeDigitalSignature(messageConcat.getBytes(), privatekey);
     }
@@ -116,10 +127,10 @@ public final class CryptoUtils {
      * @param plainText    the plain text
      */
     public static boolean verifyDigitalSignature(PublicKey publicKey, byte[] cipherDigest,
-                                                 String... plainText) {
+        String... plainText) {
         String messageConcat = String.join("", plainText);
         return CryptoUtils
-                .verifyDigitalSignature(cipherDigest, messageConcat.getBytes(), publicKey);
+            .verifyDigitalSignature(cipherDigest, messageConcat.getBytes(), publicKey);
     }
 
     /**
@@ -131,7 +142,7 @@ public final class CryptoUtils {
      * @return true if the signature matches and false otherwise or an error occurs.
      */
     private static boolean verifyDigitalSignature(byte[] cipherDigest, byte[] bytes,
-                                                  PublicKey publicKey) {
+        PublicKey publicKey) {
         try {
             Signature sig = Signature.getInstance(SIGNATURE_ALGO);
             sig.initVerify(publicKey);
@@ -151,7 +162,7 @@ public final class CryptoUtils {
      * @return the generated signature.
      */
     private static byte[] makeDigitalSignature(byte[] bytes, PrivateKey privatekey)
-            throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
 
         Signature sig = Signature.getInstance(SIGNATURE_ALGO);
         sig.initSign(privatekey);
@@ -165,7 +176,7 @@ public final class CryptoUtils {
      * @param password password used to encrypt the privatekey
      */
     public static SecretKeySpec createSecretKey(String password)
-            throws NoSuchAlgorithmException, InvalidKeySpecException {
+        throws NoSuchAlgorithmException, InvalidKeySpecException {
 
         byte[] salt = SALT.getBytes();
 
@@ -185,8 +196,8 @@ public final class CryptoUtils {
      * @param secretKey    used to encrypt the key
      */
     public static String decryptPrivateKey(String encryptedKey, SecretKeySpec secretKey)
-            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
-            BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+        throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
+               BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
 
         byte[] encodedKey = Base64.decodeBase64(encryptedKey);
         Cipher cipher = Cipher.getInstance(SYM_CIPHER);
@@ -199,8 +210,8 @@ public final class CryptoUtils {
      * @param secretKey    used to encrypt the key
      */
     public static String encryptPrivateKey(String decryptedKey, SecretKeySpec secretKey)
-            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
-            BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+        throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
+               BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
 
         Cipher cipher = Cipher.getInstance(SYM_CIPHER);
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, IV);

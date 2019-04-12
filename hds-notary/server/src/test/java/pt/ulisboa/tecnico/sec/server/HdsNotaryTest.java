@@ -1,5 +1,12 @@
 package pt.ulisboa.tecnico.sec.server;
 
+import static org.junit.Assert.assertTrue;
+
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import org.junit.Before;
 import org.junit.Test;
 import pt.ulisboa.tecnico.sec.library.HdsProperties;
@@ -7,14 +14,6 @@ import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
 import pt.ulisboa.tecnico.sec.library.exceptions.UserNotFoundException;
 import pt.ulisboa.tecnico.sec.server.services.HdsNotaryState;
 import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
-
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for simple HdsNotaryApplication.
@@ -43,7 +42,7 @@ public class HdsNotaryTest {
 
     @Test
     public void testKeyPairs()
-            throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String plainText = "test";
 
         byte[] aliceSignature = CryptoUtils.makeDigitalSignature(alicePrivateKey, plainText);
@@ -53,6 +52,6 @@ public class HdsNotaryTest {
         assertTrue(CryptoUtils.verifyDigitalSignature(alicePublicKey, aliceSignature, plainText));
         assertTrue(CryptoUtils.verifyDigitalSignature(bobPublicKey, bobSignature, plainText));
         assertTrue(
-                CryptoUtils.verifyDigitalSignature(charliePublicKey, charlieSignature, plainText));
+            CryptoUtils.verifyDigitalSignature(charliePublicKey, charlieSignature, plainText));
     }
 }

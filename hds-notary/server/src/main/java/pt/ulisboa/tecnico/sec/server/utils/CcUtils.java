@@ -1,11 +1,5 @@
 package pt.ulisboa.tecnico.sec.server.utils;
 
-import org.apache.log4j.Logger;
-import pteidlib.PTEID_Certif;
-import pteidlib.PteidException;
-import pteidlib.pteid;
-import sun.security.pkcs11.wrapper.*;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -15,25 +9,28 @@ import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import org.apache.log4j.Logger;
+import pteidlib.PTEID_Certif;
+import pteidlib.PteidException;
+import pteidlib.pteid;
+import sun.security.pkcs11.wrapper.CK_ATTRIBUTE;
+import sun.security.pkcs11.wrapper.CK_C_INITIALIZE_ARGS;
+import sun.security.pkcs11.wrapper.CK_MECHANISM;
+import sun.security.pkcs11.wrapper.CK_SESSION_INFO;
+import sun.security.pkcs11.wrapper.PKCS11;
+import sun.security.pkcs11.wrapper.PKCS11Constants;
+import sun.security.pkcs11.wrapper.PKCS11Exception;
 
 public class CcUtils {
+
     private static final Logger logger = Logger.getLogger(CcUtils.class);
     private static long p11Session;
     private static PublicKey notaryPublicKey;
     private static PKCS11 pkcs11;
 
-    static {
-        try {
-            p11Session = CcUtils.OpenPkcs11Session();
-            notaryPublicKey = CcUtils.generateNotaryPublicKey();
-        } catch (Exception e) {
-            logger.error(e);
-            System.exit(1);
-        }
-    }
-
-    private static long OpenPkcs11Session() throws PteidException, ClassNotFoundException, NoSuchMethodException,
-            InvocationTargetException, IllegalAccessException, PKCS11Exception {
+    public static void init() throws PteidException, ClassNotFoundException, NoSuchMethodException,
+                                      InvocationTargetException, IllegalAccessException, PKCS11Exception,
+                                      CertificateException {
 
         System.loadLibrary("pteidlibj");
         pteid.Init("");
@@ -44,25 +41,26 @@ public class CcUtils {
 
         java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 
-        if (-1 != osName.indexOf("Windows"))
+        if (-1 != osName.indexOf("Windows")) {
             libName = "pteidpkcs11.dll";
-        else if (-1 != osName.indexOf("Mac"))
+        } else if (-1 != osName.indexOf("Mac")) {
             libName = "libpteidpkcs11.dylib";
+        }
 
         Class pkcs11Class = Class.forName("sun.security.pkcs11.wrapper.PKCS11");
-        Method getInstanceMethode = pkcs11Class.getDeclaredMethod("getInstance", new Class[]{String.class, String.class, CK_C_INITIALIZE_ARGS.class, boolean.class});
+        Method getInstanceMethode = pkcs11Class.getDeclaredMethod("getInstance",
+            new Class[]{String.class, String.class, CK_C_INITIALIZE_ARGS.class, boolean.class});
         pkcs11 = (PKCS11) getInstanceMethode.invoke(null, new Object[]{libName, "C_GetFunctionList", null, false});
 
         /* Open the PKCS11 session
          * Opens a session between an application and a token in a particular slot. */
-        long p11_session = pkcs11.C_OpenSession(0, PKCS11Constants.CKF_SERIAL_SESSION, null, null);
+        p11Session = pkcs11.C_OpenSession(0, PKCS11Constants.CKF_SERIAL_SESSION, null, null);
 
         // Token login - C_Login logs a user into a token - requires authentication pin.
-        pkcs11.C_Login(p11_session, 1, null);
-        CK_SESSION_INFO info = pkcs11.C_GetSessionInfo(p11_session);
+        pkcs11.C_Login(p11Session, 1, null);
+        CK_SESSION_INFO info = pkcs11.C_GetSessionInfo(p11Session);
 
-        return p11_session;
-
+        notaryPublicKey = CcUtils.generateNotaryPublicKey();
     }
 
     private static PublicKey generateNotaryPublicKey() throws CertificateException, PteidException {
