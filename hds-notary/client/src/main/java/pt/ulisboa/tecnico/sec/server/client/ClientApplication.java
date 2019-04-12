@@ -38,6 +38,7 @@ public class ClientApplication {
 
     private static RSAPrivateKey privateKey;
     private static RSAPublicKey serverPublicKey;
+    private static RSAPublicKey notaryPublicKey;
 
     private static HdsNotaryService hdsNotaryService;
 
@@ -81,6 +82,8 @@ public class ClientApplication {
             reg.rebind("ClientService", clientService);
 
             logger.info("ClientService up at port " + registryPort);
+
+            //notaryPublicKey = hdsNotaryService.getNotaryPublicKey();
 
             while (true) {
                 System.out.println("HDS Notary Service =======================");

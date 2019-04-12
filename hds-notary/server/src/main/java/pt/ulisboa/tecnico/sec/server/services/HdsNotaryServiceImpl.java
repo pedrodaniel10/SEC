@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
+import java.security.interfaces.RSAPublicKey;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import pt.ulisboa.tecnico.sec.library.data.Good;
 import pt.ulisboa.tecnico.sec.library.data.Transaction;
@@ -65,5 +66,10 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
         return this.serverState
             .transferGood(transactionId, sellerId, buyerId, goodId, sellerSignature,
                 buyerSignature);
+    }
+
+    @Override
+    public RSAPublicKey getNotaryPublicKey() throws RemoteException{
+        return null;
     }
 }

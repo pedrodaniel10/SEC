@@ -29,15 +29,15 @@ public class ClientServiceImpl extends UnicastRemoteObject implements ClientServ
 
     @Override
     public Transaction buy(String transactionId,
-                                                  String sellerId,
-                                                  String buyerId,
-                                                  String goodId,
-                                                  byte[] buyerSignature)
+        String sellerId,
+        String buyerId,
+        String goodId,
+        byte[] buyerSignature)
         throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
 
-        byte[] signature = CryptoUtils
+        byte[] sellerSignature = CryptoUtils
             .makeDigitalSignature(privateKey, transactionId, sellerId, buyerId, goodId);
         return hdsNotaryService
-            .transferGood(transactionId, sellerId, buyerId, goodId, signature, buyerSignature);
+            .transferGood(transactionId, sellerId, buyerId, goodId, sellerSignature, buyerSignature);
     }
 }

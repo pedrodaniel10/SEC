@@ -38,6 +38,10 @@ public final class CryptoUtils {
     private static final String SIGNATURE_ALGO = "SHA256withRSA";
     private static final String PASSWORD_ALGO = "PBKDF2WithHmacSHA512";
     private static final String SYM_CIPHER = "AES/CBC/PKCS5Padding";
+    private static final IvParameterSpec IV = new IvParameterSpec(
+        new byte[]{0x59, (byte) 0xee, 0x74, 0x00, 0x0a, (byte) 0xe1, (byte) 0xe9, 0x16, (byte) 0xb0, (byte) 0xaa, 0x00,
+            (byte) 0x81, (byte) 0xd2, 0x33, (byte) 0xc3, 0x3a});
+    private static final String SALT = "N4V1fQkbwYKDL5bn";
 
     private static final int ITERATION_COUNT = 40000;
 
@@ -172,14 +176,11 @@ public final class CryptoUtils {
      * Creates the secret key derived from the privatekey stored in the file
      *
      * @param password password used to encrypt the privatekey
-     * @return
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeySpecException
      */
-    public static SecretKeySpec createSecretKey (String password)
-            throws NoSuchAlgorithmException, InvalidKeySpecException {
+    public static SecretKeySpec createSecretKey(String password)
+        throws NoSuchAlgorithmException, InvalidKeySpecException {
 
-        byte[] salt = "N4V1fQkbwYKDL5bn".getBytes();
+        byte[] salt = SALT.getBytes();
 
         /* Generate secret key derived from password */
         SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(PASSWORD_ALGO);
@@ -194,43 +195,28 @@ public final class CryptoUtils {
      * Decrypts the stored private key with a secret key
      *
      * @param encryptedKey stored private key
-     * @param secretKey used to encrypt the key
-     * @return
-     * @throws NoSuchPaddingException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws BadPaddingException
-     * @throws IllegalBlockSizeException
-     * @throws InvalidAlgorithmParameterException
+     * @param secretKey    used to encrypt the key
      */
     public static String decryptPrivateKey(String encryptedKey, SecretKeySpec secretKey)
-            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
-            BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+        throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
+               BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
 
         byte[] encodedKey = Base64.decodeBase64(encryptedKey);
         Cipher cipher = Cipher.getInstance(SYM_CIPHER);
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }));
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, IV);
         return new String(cipher.doFinal(encodedKey));
     }
 
     /**
-     *
      * @param decryptedKey plain key
-     * @param secretKey used to encrypt the key
-     * @return
-     * @throws NoSuchPaddingException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws BadPaddingException
-     * @throws IllegalBlockSizeException
-     * @throws InvalidAlgorithmParameterException
+     * @param secretKey    used to encrypt the key
      */
     public static String encryptPrivateKey(String decryptedKey, SecretKeySpec secretKey)
-            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
-            BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+        throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException,
+               BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
 
         Cipher cipher = Cipher.getInstance(SYM_CIPHER);
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }));
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, IV);
         byte[] encryptedKey = cipher.doFinal(decryptedKey.getBytes());
         return Base64.encodeBase64String(encryptedKey);
     }

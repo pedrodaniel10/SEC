@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.sec.library.interfaces.server;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
+import java.security.interfaces.RSAPublicKey;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import pt.ulisboa.tecnico.sec.library.data.Good;
 import pt.ulisboa.tecnico.sec.library.data.Transaction;
@@ -33,4 +34,6 @@ public interface HdsNotaryService extends Remote {
         byte[] sellerSignature,
         byte[] buyerSignature)
         throws RemoteException, ServerException;
+
+    RSAPublicKey getNotaryPublicKey() throws RemoteException;
 }

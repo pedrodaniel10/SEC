@@ -5,6 +5,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -306,6 +307,13 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         }
     }
 
+    @Override
+    public RSAPublicKey getNotaryPublicKey() {
+        return null;
+    }
+
+    //private void signMessage
+
 
     public Map<String, Transaction> getTransactions() {
         return transactions;
@@ -364,7 +372,6 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
                     + ".");
         }
     }
-
 
     public User getUserById(String userId) throws UserNotFoundException {
         User user = this.users.get(userId);

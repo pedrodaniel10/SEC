@@ -38,8 +38,8 @@ public class LibraryTest {
             IllegalBlockSizeException, InvalidKeyException, BadPaddingException, NoSuchPaddingException,
             InvalidAlgorithmParameterException, InvalidKeySpecException {
 
-        String key = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAN+wIrgV+9at9M6B axYH/wzo7EYpYkSYd17OiDNECLqak";
-        String password = "password";
+        String key = "thisisakey";
+        String password = "thisisapassword";
 
         SecretKeySpec secretKey = CryptoUtils.createSecretKey(password);
         String encodedKey = CryptoUtils.encryptPrivateKey(key, secretKey);

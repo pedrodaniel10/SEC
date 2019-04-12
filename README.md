@@ -24,3 +24,10 @@ simply execute the command
     mvn test
 ```
 Running this command, all tests should pass.
+
+## Passwords for the users
+|    User       |  Password       |
+| :-----------: |:---------------:| 
+| alice         | Uvv1j7a60q2q0a4 | 
+| bob           | JNTpC0SE9Hzb3SG |   
+| charlie       | 9QrKUNt9HAXPKG9 |   
