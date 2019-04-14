@@ -49,6 +49,12 @@ Start the client Bob:
     mvn exec:java -Dexec.args="bob JNTpC0SE9Hzb3SG"
 ```
 
+## Run Tests
+To run the tests:
+```
+    mvn test
+```
+
 ## Passwords for the users
 |    User       |  Password       |
 | :-----------: |:---------------:|
