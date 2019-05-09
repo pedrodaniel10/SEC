@@ -76,7 +76,7 @@ public final class CryptoUtils {
      * @param key encoded key.
      * @return the RSAPrivateKey decoded key.
      */
-    public static RSAPrivateKey getPrivateKey(String key) {
+    private static RSAPrivateKey getPrivateKey(String key) {
         try {
             byte[] encoded = Base64.decodeBase64(key);
             KeyFactory kf = KeyFactory.getInstance("RSA");

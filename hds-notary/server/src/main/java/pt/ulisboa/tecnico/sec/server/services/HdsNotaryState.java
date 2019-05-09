@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Scanner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
@@ -107,9 +106,9 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Generate signature
         try {
-            byte[] notarySignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, goodId, Boolean.toString(true),
+            byte[] serverSignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, goodId, Boolean.toString(true),
                 nonce);
-            return new ImmutablePair<>(true, notarySignature);
+            return new ImmutablePair<>(true, serverSignature);
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             throw new InvalidSignatureException("Server was unable to sign the message.");
         }
@@ -178,9 +177,9 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Generate signature
         try {
-            byte[] notarySignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, transaction.getTransactionId(),
+            byte[] serverSignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, transaction.getTransactionId(),
                 nonce);
-            transaction.setNotarySignature(notarySignature);
+            transaction.setNotarySignature(serverSignature);
             return transaction;
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             throw new InvalidSignatureException("Server was unable to sign the message.");
@@ -220,9 +219,9 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Generate signature
         try {
-            byte[] notarySignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, goodId,
+            byte[] serverSignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, goodId,
                 Boolean.toString(good.isOnSale()), nonce);
-            return new ImmutablePair<>(good, notarySignature);
+            return new ImmutablePair<>(good, serverSignature);
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             throw new InvalidSignatureException("Server was unable to sign the message.");
         }

@@ -51,7 +51,6 @@ public final class PersistenceUtils {
             serverState = mapper.readValue(dataFile, HdsNotaryState.class);
         } catch (IOException e) {
             // File might be corrupted, try to load backup file
-            e.printStackTrace();
             logger.error(e);
             try {
                 serverState = mapper.readValue(dataBackupFile, HdsNotaryState.class);

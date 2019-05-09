@@ -48,13 +48,13 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
         String buyerId,
         String goodId,
         String nonce,
-        byte[] signature) throws RemoteException, ServerException {
+        byte[] signature) throws ServerException {
         return this.serverState.intentionToBuy(sellerId, buyerId, goodId, nonce, signature);
     }
 
     @Override
     public ImmutablePair<Good, byte[]> getStateOfGood(String userId, String goodId, String nonce, byte[] signature)
-        throws RemoteException, ServerException {
+        throws ServerException {
         return this.serverState.getStateOfGood(userId, goodId, nonce, signature);
     }
 
@@ -64,7 +64,7 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
         String buyerId,
         String goodId,
         byte[] sellerSignature,
-        byte[] buyerSignature) throws RemoteException, ServerException {
+        byte[] buyerSignature) throws ServerException {
         return this.serverState
             .transferGood(transactionId, sellerId, buyerId, goodId, sellerSignature,
                 buyerSignature);

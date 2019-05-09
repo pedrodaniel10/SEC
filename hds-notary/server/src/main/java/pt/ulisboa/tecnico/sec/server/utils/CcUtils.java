@@ -16,7 +16,6 @@ import pteidlib.pteid;
 import sun.security.pkcs11.wrapper.CK_ATTRIBUTE;
 import sun.security.pkcs11.wrapper.CK_C_INITIALIZE_ARGS;
 import sun.security.pkcs11.wrapper.CK_MECHANISM;
-import sun.security.pkcs11.wrapper.CK_SESSION_INFO;
 import sun.security.pkcs11.wrapper.PKCS11;
 import sun.security.pkcs11.wrapper.PKCS11Constants;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
@@ -39,11 +38,9 @@ public class CcUtils {
         String osName = System.getProperty("os.name");
         String libName = "libpteidpkcs11.so";
 
-        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
-
-        if (-1 != osName.indexOf("Windows")) {
+        if (osName.contains("Windows")) {
             libName = "pteidpkcs11.dll";
-        } else if (-1 != osName.indexOf("Mac")) {
+        } else if (osName.contains("Mac")) {
             libName = "libpteidpkcs11.dylib";
         }
 
@@ -58,17 +55,16 @@ public class CcUtils {
 
         // Token login - C_Login logs a user into a token - requires authentication pin.
         pkcs11.C_Login(p11Session, 1, null);
-        CK_SESSION_INFO info = pkcs11.C_GetSessionInfo(p11Session);
 
         notaryPublicKey = CcUtils.generateNotaryPublicKey();
     }
 
     private static PublicKey generateNotaryPublicKey() throws CertificateException, PteidException {
         PTEID_Certif[] certificates = pteid.GetCertificates();
-        byte[] certificate_bytes = certificates[0].certif; //certificado 0 é o de autenticacao
+        byte[] certificateBytes = certificates[0].certif; //certificado 0 é o de autenticacao
 
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        InputStream in = new ByteArrayInputStream(certificate_bytes);
+        InputStream in = new ByteArrayInputStream(certificateBytes);
         X509Certificate certificate = (X509Certificate) cf.generateCertificate(in);
 
         return certificate.getPublicKey();

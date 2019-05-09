@@ -37,9 +37,7 @@ public class HdsNotaryApplication {
         } catch (Exception e) {
             logger.error(e);
             try {
-                if(pteid.IsActivated() > 0) {
-                    pteid.Exit(pteid.PTEID_EXIT_LEAVE_CARD);
-                }
+                pteid.Exit(pteid.PTEID_EXIT_LEAVE_CARD);
             } catch (PteidException e1) {
                 System.exit(1);
             }
