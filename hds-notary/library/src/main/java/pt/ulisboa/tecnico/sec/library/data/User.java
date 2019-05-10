@@ -11,7 +11,7 @@ public class User implements Serializable {
     private String name;
     private String userId;
     private String publicKeyS;
-    private int requestNumber;
+    private String nonce;
 
     @JsonIgnore
     private RSAPrivateKey privateKey;
@@ -52,12 +52,12 @@ public class User implements Serializable {
         this.publicKey = CryptoUtils.getPublicKey(publicKeyS);
     }
 
-    public int getRequestNumber() {
-        return requestNumber;
+    public String getNonce() {
+        return nonce;
     }
 
-    public void setRequestNumber(int requestNumber) {
-        this.requestNumber = requestNumber;
+    public void setNonce(String nonce) {
+        this.nonce = nonce;
     }
 
     public RSAPrivateKey getPrivateKey() {
@@ -76,7 +76,7 @@ public class User implements Serializable {
         this.publicKey = publicKey;
     }
 
-    public void incrementRequestNumber() {
-        this.requestNumber++;
+    public void generateNonce() {
+        this.nonce = CryptoUtils.generateNonce();
     }
 }

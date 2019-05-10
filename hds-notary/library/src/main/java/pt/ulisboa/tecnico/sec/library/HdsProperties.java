@@ -85,4 +85,8 @@ public final class HdsProperties {
     public static String getClientPrivateKey(String name) {
         return properties.getProperty(name + ".privKey");
     }
+
+    public static String getServerPublicKey() {
+        return properties.getProperty("server.publickey");
+    }
 }

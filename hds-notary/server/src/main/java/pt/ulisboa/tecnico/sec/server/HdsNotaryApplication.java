@@ -5,6 +5,9 @@ import java.rmi.registry.Registry;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.library.HdsProperties;
 import pt.ulisboa.tecnico.sec.server.services.HdsNotaryServiceImpl;
+import pt.ulisboa.tecnico.sec.server.utils.CcUtils;
+import pteidlib.PteidException;
+import pteidlib.pteid;
 
 /**
  * HdsNotaryService world!
@@ -16,8 +19,9 @@ public class HdsNotaryApplication {
     public static void main(String[] args) {
         int registryPort = HdsProperties.getServerPort();
 
-        // Bind RMI service
         try {
+            CcUtils.init();
+            //Bind RMI service
             HdsNotaryServiceImpl server = new HdsNotaryServiceImpl();
 
             final Registry reg = LocateRegistry.createRegistry(registryPort);
@@ -28,8 +32,15 @@ public class HdsNotaryApplication {
 
             System.in.read();
 
+            pteid.Exit(pteid.PTEID_EXIT_LEAVE_CARD);
+
         } catch (Exception e) {
             logger.error(e);
+            try {
+                pteid.Exit(pteid.PTEID_EXIT_LEAVE_CARD);
+            } catch (PteidException e1) {
+                System.exit(1);
+            }
             System.exit(1);
         }
     }
