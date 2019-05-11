@@ -9,9 +9,9 @@ public class Transaction implements Serializable {
     private String sellerId;
     private String goodId;
 
-    private byte[] sellerSignature;
-    private byte[] buyerSignature;
-    private byte[] notarySignature;
+    private String sellerSignature;
+    private String buyerSignature;
+    private String notarySignature;
 
     public Transaction() {
     }
@@ -21,6 +21,16 @@ public class Transaction implements Serializable {
         this.buyerId = buyerId;
         this.sellerId = sellerId;
         this.goodId = goodId;
+    }
+
+    public Transaction(String transactionId, String buyerId, String sellerId, String goodId,
+        String sellerSignature, String buyerSignature) {
+        this.transactionId = transactionId;
+        this.buyerId = buyerId;
+        this.sellerId = sellerId;
+        this.goodId = goodId;
+        this.sellerSignature = sellerSignature;
+        this.buyerSignature = buyerSignature;
     }
 
     public String getTransactionId() {
@@ -55,27 +65,27 @@ public class Transaction implements Serializable {
         this.goodId = goodId;
     }
 
-    public byte[] getSellerSignature() {
+    public String getSellerSignature() {
         return sellerSignature;
     }
 
-    public void setSellerSignature(byte[] sellerSignature) {
+    public void setSellerSignature(String sellerSignature) {
         this.sellerSignature = sellerSignature;
     }
 
-    public byte[] getBuyerSignature() {
+    public String getBuyerSignature() {
         return buyerSignature;
     }
 
-    public void setBuyerSignature(byte[] buyerSignature) {
+    public void setBuyerSignature(String buyerSignature) {
         this.buyerSignature = buyerSignature;
     }
 
-    public byte[] getNotarySignature() {
+    public String getNotarySignature() {
         return notarySignature;
     }
 
-    public void setNotarySignature(byte[] notarySignature) {
+    public void setNotarySignature(String notarySignature) {
         this.notarySignature = notarySignature;
     }
 }

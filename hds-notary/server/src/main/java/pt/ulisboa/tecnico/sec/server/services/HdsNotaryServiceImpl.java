@@ -8,17 +8,16 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
 import pt.ulisboa.tecnico.sec.services.data.Good;
 import pt.ulisboa.tecnico.sec.services.data.Transaction;
 import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
-import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
 
 /**
  * Service wrapper for RMI. This class only calls the function of serverState.
  */
-public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNotaryService,
-    Serializable {
+public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNotaryService, Serializable {
 
     private HdsNotaryState serverState;
 
@@ -37,10 +36,14 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
     }
 
     @Override
-    public ImmutablePair<Boolean, byte[]> intentionToSell(String sellerId, String goodId, String nonce,
-        byte[] signature)
+    public ImmutablePair<Boolean, String> intentionToSell(String
+        sellerId,
+        String goodId,
+        String nonce,
+        int timeStamp,
+        String signature)
         throws ServerException {
-        return this.serverState.intentionToSell(sellerId, goodId, nonce, signature);
+        return this.serverState.intentionToSell(sellerId, goodId, nonce, timeStamp, signature);
     }
 
     @Override
@@ -48,30 +51,24 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
         String buyerId,
         String goodId,
         String nonce,
-        byte[] signature) throws ServerException {
+        String signature) throws ServerException {
         return this.serverState.intentionToBuy(sellerId, buyerId, goodId, nonce, signature);
     }
 
     @Override
-    public ImmutablePair<Good, byte[]> getStateOfGood(String userId, String goodId, String nonce, byte[] signature)
+    public ImmutablePair<Good, String> getStateOfGood(String userId, String goodId, String nonce, int readId, String signature)
         throws ServerException {
-        return this.serverState.getStateOfGood(userId, goodId, nonce, signature);
+        return this.serverState.getStateOfGood(userId, goodId, nonce, readId, signature);
     }
 
     @Override
-    public Transaction transferGood(String transactionId,
-        String sellerId,
-        String buyerId,
-        String goodId,
-        byte[] sellerSignature,
-        byte[] buyerSignature) throws ServerException {
+    public Transaction transferGood(Transaction transaction, int timeStamp, String signature) throws ServerException {
         return this.serverState
-            .transferGood(transactionId, sellerId, buyerId, goodId, sellerSignature,
-                buyerSignature);
+            .transferGood(transaction, timeStamp, signature);
     }
 
     @Override
-    public ImmutablePair<PublicKey, byte[]> getNotaryPublicKey()
+    public ImmutablePair<PublicKey, String> getNotaryPublicKey()
         throws RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         return this.serverState.getNotaryPublicKey();
     }

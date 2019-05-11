@@ -40,7 +40,7 @@ public class CryptoTest {
         PrivateKey privateKey = HdsProperties.getClientPrivateKey("alice", "Uvv1j7a60q2q0a4");
         PublicKey publicKey = HdsProperties.getClientPublicKey("alice");
 
-        byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
+        String signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
         Assert.assertTrue(CryptoUtils.verifyDigitalSignature(publicKey, signature, PLAIN_TEXT));
     }
 
@@ -49,7 +49,7 @@ public class CryptoTest {
         PrivateKey privateKey = HdsProperties.getClientPrivateKey("bob", "JNTpC0SE9Hzb3SG");
         PublicKey publicKey = HdsProperties.getClientPublicKey("bob");
 
-        byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
+        String signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
         Assert.assertTrue(CryptoUtils.verifyDigitalSignature(publicKey, signature, PLAIN_TEXT));
     }
 
@@ -58,7 +58,7 @@ public class CryptoTest {
         PrivateKey privateKey = HdsProperties.getClientPrivateKey("charlie", "9QrKUNt9HAXPKG9");
         PublicKey publicKey = HdsProperties.getClientPublicKey("charlie");
 
-        byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
+        String signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
         Assert.assertTrue(CryptoUtils.verifyDigitalSignature(publicKey, signature, PLAIN_TEXT));
     }
 
@@ -67,7 +67,7 @@ public class CryptoTest {
         PrivateKey privateKey = HdsProperties.getServerPrivateKey("0", "admin");
         PublicKey publicKey = HdsProperties.getServerPublicKey("0");
 
-        byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
+        String signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
         Assert.assertTrue(CryptoUtils.verifyDigitalSignature(publicKey, signature, PLAIN_TEXT));
     }
 
@@ -76,7 +76,7 @@ public class CryptoTest {
         PrivateKey privateKey = HdsProperties.getNotarySignaturePrivateKey("0", "admin");
         PublicKey publicKey = HdsProperties.getNotarySignaturePublicKey("0");
 
-        byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
+        String signature = CryptoUtils.makeDigitalSignature(privateKey, PLAIN_TEXT);
         Assert.assertTrue(CryptoUtils.verifyDigitalSignature(publicKey, signature, PLAIN_TEXT));
     }
 

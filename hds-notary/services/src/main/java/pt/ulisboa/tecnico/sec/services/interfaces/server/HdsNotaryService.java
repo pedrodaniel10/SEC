@@ -18,25 +18,26 @@ public interface HdsNotaryService extends Remote {
 
     String getNonce(String userId) throws RemoteException, ServerException;
 
-    ImmutablePair<Boolean, byte[]> intentionToSell(String sellerId, String goodId, String nonce,
-        byte[] signature)
-        throws RemoteException, ServerException;
-
-    Transaction intentionToBuy(String sellerId, String buyerId, String goodId, String nonce,
-        byte[] signature)
-        throws RemoteException, ServerException;
-
-    ImmutablePair<Good, byte[]> getStateOfGood(String userId, String goodId, String nonce, byte[] signature)
-        throws RemoteException, ServerException;
-
-    Transaction transferGood(String transactionId,
-        String sellerId,
-        String buyerId,
+    ImmutablePair<Boolean, String> intentionToSell(String sellerId,
         String goodId,
-        byte[] sellerSignature,
-        byte[] buyerSignature)
+        String nonce,
+        int timeStamp,
+        String signature)
         throws RemoteException, ServerException;
 
-    ImmutablePair<PublicKey, byte[]> getNotaryPublicKey()
+    Transaction intentionToBuy(String sellerId, String buyerId, String goodId, String nonce, String signature)
+        throws RemoteException, ServerException;
+
+    ImmutablePair<Good, String> getStateOfGood(String userId,
+        String goodId,
+        String nonce,
+        int readId,
+        String signature)
+        throws RemoteException, ServerException;
+
+    Transaction transferGood(Transaction transaction, int timeStamp, String signature)
+        throws RemoteException, ServerException;
+
+    ImmutablePair<PublicKey, String> getNotaryPublicKey()
         throws RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException;
 }

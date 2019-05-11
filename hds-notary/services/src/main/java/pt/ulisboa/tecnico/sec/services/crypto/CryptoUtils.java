@@ -71,25 +71,6 @@ public final class CryptoUtils {
     }
 
     /**
-     * Decodes the key into RSAPrivateKey
-     *
-     * @param key encoded key.
-     * @return the RSAPrivateKey decoded key.
-     */
-    private static RSAPrivateKey getPrivateKey(String key) {
-        try {
-            byte[] encoded = Base64.decodeBase64(key);
-            KeyFactory kf = KeyFactory.getInstance("RSA");
-            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
-            return (RSAPrivateKey) kf.generatePrivate(keySpec);
-
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-            logger.error(e);
-        }
-        return null;
-    }
-
-    /**
      * Decodes the key into RSAPublicKey
      *
      * @param key encoded key.
@@ -110,13 +91,13 @@ public final class CryptoUtils {
     /**
      * Returns the digital signature of the message
      *
-     * @param privatekey private key used to sign
+     * @param privateKey private key used to sign
      * @param message    the message in order
      */
-    public static byte[] makeDigitalSignature(PrivateKey privatekey, String... message)
+    public static String makeDigitalSignature(PrivateKey privateKey, String... message)
         throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         String messageConcat = String.join("", message);
-        return CryptoUtils.makeDigitalSignature(messageConcat.getBytes(), privatekey);
+        return CryptoUtils.makeDigitalSignature(messageConcat.getBytes(), privateKey);
     }
 
     /**
@@ -126,29 +107,8 @@ public final class CryptoUtils {
      * @param cipherDigest the signature
      * @param plainText    the plain text
      */
-    public static boolean verifyDigitalSignature(PublicKey publicKey, byte[] cipherDigest, String... plainText) {
-        String messageConcat = String.join("", plainText);
-        return CryptoUtils.verifyDigitalSignature(cipherDigest, messageConcat.getBytes(), publicKey);
-    }
-
-    /**
-     * Verifies the signature with the provided PublicKey
-     *
-     * @param cipherDigest The received signature
-     * @param bytes        the plain text
-     * @param publicKey    the public key to test the signature.
-     * @return true if the signature matches and false otherwise or an error occurs.
-     */
-    private static boolean verifyDigitalSignature(byte[] cipherDigest, byte[] bytes, PublicKey publicKey) {
-        try {
-            Signature sig = Signature.getInstance(SIGNATURE_ALGO);
-            sig.initVerify(publicKey);
-            sig.update(bytes);
-            return sig.verify(cipherDigest);
-        } catch (SignatureException | InvalidKeyException | NoSuchAlgorithmException e) {
-            logger.error(e);
-            return false;
-        }
+    public static boolean verifyDigitalSignature(PublicKey publicKey, String cipherDigest, String... plainText) {
+        return CryptoUtils.verifyDigitalSignature(publicKey,Base64.decodeBase64(cipherDigest), plainText);
     }
 
     /**
@@ -158,13 +118,13 @@ public final class CryptoUtils {
      * @param privatekey the private key.
      * @return the generated signature.
      */
-    private static byte[] makeDigitalSignature(byte[] bytes, PrivateKey privatekey)
+    private static String makeDigitalSignature(byte[] bytes, PrivateKey privatekey)
         throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
 
         Signature sig = Signature.getInstance(SIGNATURE_ALGO);
         sig.initSign(privatekey);
         sig.update(bytes);
-        return sig.sign();
+        return Base64.encodeBase64String(sig.sign());
     }
 
     /**
@@ -215,4 +175,57 @@ public final class CryptoUtils {
         byte[] encryptedKey = cipher.doFinal(decryptedKey.getBytes());
         return Base64.encodeBase64String(encryptedKey);
     }
+
+    /**
+     * Decodes the key into RSAPrivateKey
+     *
+     * @param key encoded key.
+     * @return the RSAPrivateKey decoded key.
+     */
+    private static RSAPrivateKey getPrivateKey(String key) {
+        try {
+            byte[] encoded = Base64.decodeBase64(key);
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
+            return (RSAPrivateKey) kf.generatePrivate(keySpec);
+
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            logger.error(e);
+        }
+        return null;
+    }
+
+    /**
+     * Verifies the signature with the provided PublicKey
+     *
+     * @param cipherDigest The received signature
+     * @param bytes        the plain text
+     * @param publicKey    the public key to test the signature.
+     * @return true if the signature matches and false otherwise or an error occurs.
+     */
+    private static boolean verifyDigitalSignature(byte[] cipherDigest, byte[] bytes, PublicKey publicKey) {
+        try {
+            Signature sig = Signature.getInstance(SIGNATURE_ALGO);
+            sig.initVerify(publicKey);
+            sig.update(bytes);
+            return sig.verify(cipherDigest);
+        } catch (SignatureException | InvalidKeyException | NoSuchAlgorithmException e) {
+            logger.error(e);
+            return false;
+        }
+    }
+
+    /**
+     * Verifies the digital signature of the plain text
+     *
+     * @param publicKey    public key to check signature
+     * @param cipherDigest the signature
+     * @param plainText    the plain text
+     */
+    private static boolean verifyDigitalSignature(PublicKey publicKey, byte[] cipherDigest, String... plainText) {
+        String messageConcat = String.join("", plainText);
+        return CryptoUtils.verifyDigitalSignature(cipherDigest, messageConcat.getBytes(), publicKey);
+    }
+
+
 }

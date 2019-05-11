@@ -60,7 +60,7 @@ public class ServerServiceTest {
         String goodId = "0";
         String nonce = hdsNotaryService.getNonce(userId);
 
-        ImmutablePair<Good, byte[]> response = hdsNotaryService.getStateOfGood(userId, goodId, nonce,
+        ImmutablePair<Good, String> response = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
 
         Good good = response.getLeft();
@@ -82,12 +82,12 @@ public class ServerServiceTest {
         String goodId = "0";
         String nonce = hdsNotaryService.getNonce(userId);
 
-        Good good = hdsNotaryService.getStateOfGood(userId, goodId, nonce,
+        Good good = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce)).getLeft();
         Assert.assertNotNull(good);
 
         nonce = hdsNotaryService.getNonce(userId);
-        good = hdsNotaryService.getStateOfGood(userId, goodId, nonce,
+        good = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce)).getLeft();
 
         Assert.assertNotNull(good);
@@ -101,7 +101,7 @@ public class ServerServiceTest {
 
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.getStateOfGood(userId, goodId, nonce,
+        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce));
     }
 
@@ -113,7 +113,7 @@ public class ServerServiceTest {
 
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.getStateOfGood(userId, goodId, nonce,
+        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
     }
 
@@ -125,7 +125,7 @@ public class ServerServiceTest {
 
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.getStateOfGood(userId, "different", nonce,
+        hdsNotaryService.getStateOfGood(userId, "different", nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
     }
 
@@ -136,10 +136,10 @@ public class ServerServiceTest {
         String goodId = "1";
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.getStateOfGood(userId, goodId, nonce,
+        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
 
-        hdsNotaryService.getStateOfGood(userId, goodId, nonce,
+        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
     }
 
@@ -150,10 +150,10 @@ public class ServerServiceTest {
         String goodId = "1";
         String nonce = hdsNotaryService.getNonce(userId);
 
-        ImmutablePair<Good, byte[]> response = hdsNotaryService.getStateOfGood(userId, goodId, nonce,
+        ImmutablePair<Good, String> response = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
 
-        byte[] spoofedSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce);
+        String spoofedSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce);
         boolean serverValidation = CryptoUtils.verifyDigitalSignature(serverPublicKey, spoofedSignature,
             goodId, Boolean.toString(response.getLeft().isOnSale()), nonce);
 
@@ -162,17 +162,17 @@ public class ServerServiceTest {
 
     @Test(expected = ServerException.class)
     public void testWrongStatusOfGood() throws ServerException, RemoteException {
-        hdsNotaryService.getStateOfGood("userId", "This id does not exist.", "", null);
+        hdsNotaryService.getStateOfGood("userId", "This id does not exist.", "", 0, null);
     }
 
     @Test(expected = ServerException.class)
     public void testNullStatusOfGood() throws ServerException, RemoteException {
-        hdsNotaryService.getStateOfGood("userId", null, "", null);
+        hdsNotaryService.getStateOfGood("userId", null, "", 0, null);
     }
 
     @Test(expected = ServerException.class)
     public void testEmptyStatusOfGood() throws ServerException, RemoteException {
-        hdsNotaryService.getStateOfGood("userId", "     ", "", null);
+        hdsNotaryService.getStateOfGood("userId", "     ", "", 0, null);
     }
 
     // IntentionToSell
@@ -183,7 +183,7 @@ public class ServerServiceTest {
         String goodId = "1";
         String nonce = hdsNotaryService.getNonce(userId);
 
-        ImmutablePair<Boolean, byte[]> response = hdsNotaryService.intentionToSell(userId, goodId, nonce,
+        ImmutablePair<Boolean, String> response = hdsNotaryService.intentionToSell(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
                 userId, goodId, nonce));
 
@@ -201,13 +201,13 @@ public class ServerServiceTest {
         String goodId = "1";
         String nonce = hdsNotaryService.getNonce(userId);
 
-        boolean success = hdsNotaryService.intentionToSell(userId, goodId, nonce,
+        boolean success = hdsNotaryService.intentionToSell(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
                 userId, goodId, nonce)).getLeft();
         Assert.assertTrue(success);
 
         nonce = hdsNotaryService.getNonce(userId);
-        success = hdsNotaryService.intentionToSell(userId, goodId, nonce,
+        success = hdsNotaryService.intentionToSell(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
                 userId, goodId, nonce)).getLeft();
         Assert.assertTrue(success);
@@ -221,7 +221,7 @@ public class ServerServiceTest {
 
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, goodId, nonce,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
                 userId, goodId, nonce));
     }
@@ -234,7 +234,7 @@ public class ServerServiceTest {
 
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, goodId, nonce,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(bobPrivateKey,
                 userId, goodId, nonce));
     }
@@ -247,9 +247,8 @@ public class ServerServiceTest {
 
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, goodId, nonce,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey,
-                userId, goodId, nonce));
+        hdsNotaryService.intentionToSell(userId, goodId, nonce, 0, CryptoUtils.makeDigitalSignature(alicePrivateKey,
+            userId, goodId, nonce));
     }
 
     @Test(expected = InvalidSignatureException.class)
@@ -260,7 +259,7 @@ public class ServerServiceTest {
 
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, "different", nonce,
+        hdsNotaryService.intentionToSell(userId, "different", nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
                 userId, goodId, nonce));
     }
@@ -272,11 +271,11 @@ public class ServerServiceTest {
         String goodId = "1";
         String nonce = hdsNotaryService.getNonce(userId);
 
-        hdsNotaryService.intentionToSell(userId, goodId, nonce,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
                 userId, goodId, nonce));
 
-        hdsNotaryService.intentionToSell(userId, goodId, nonce,
+        hdsNotaryService.intentionToSell(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
                 userId, goodId, nonce));
     }
@@ -288,11 +287,11 @@ public class ServerServiceTest {
         String goodId = "1";
         String nonce = hdsNotaryService.getNonce(userId);
 
-        ImmutablePair<Boolean, byte[]> response = hdsNotaryService.intentionToSell(userId, goodId, nonce,
+        ImmutablePair<Boolean, String> response = hdsNotaryService.intentionToSell(userId, goodId, nonce, 0,
             CryptoUtils.makeDigitalSignature(alicePrivateKey,
                 userId, goodId, nonce));
 
-        byte[] spoofedSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce);
+        String spoofedSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce);
         boolean serverValidation = CryptoUtils.verifyDigitalSignature(serverPublicKey, spoofedSignature,
             userId, goodId, nonce);
 
@@ -401,7 +400,7 @@ public class ServerServiceTest {
             CryptoUtils.makeDigitalSignature(alicePrivateKey, ownerId, userId,
                 goodId, nonce));
 
-        byte[] spoofedSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, ownerId, userId, goodId, nonce);
+        String spoofedSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, ownerId, userId, goodId, nonce);
         boolean serverValidation = CryptoUtils.verifyDigitalSignature(serverPublicKey, spoofedSignature,
             response.getTransactionId(), nonce);
 
@@ -466,7 +465,7 @@ public class ServerServiceTest {
     @Test
     public void verifyNotaryPublicKey()
         throws RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        ImmutablePair<PublicKey, byte[]> requestNotaryKey = hdsNotaryService.getNotaryPublicKey();
+        ImmutablePair<PublicKey, String> requestNotaryKey = hdsNotaryService.getNotaryPublicKey();
         PublicKey notaryPublicKey = requestNotaryKey.getLeft();
 
         Boolean validation = CryptoUtils.verifyDigitalSignature(serverPublicKey, requestNotaryKey.getRight(),
@@ -484,7 +483,7 @@ public class ServerServiceTest {
 
         // Intention to buy
         String nonce = hdsNotaryService.getNonce(buyerId);
-        byte[] signature = CryptoUtils.makeDigitalSignature(alicePrivateKey, sellerId, buyerId,
+        String signature = CryptoUtils.makeDigitalSignature(alicePrivateKey, sellerId, buyerId,
             goodId, nonce);
 
         final Transaction transactionResponse = hdsNotaryService.intentionToBuy(
@@ -504,7 +503,7 @@ public class ServerServiceTest {
         ClientService clientServiceSeller =
             (ClientService) Naming.lookup(HdsProperties.getClientUri(sellerId));
 
-        byte[] buyer_signature = CryptoUtils.makeDigitalSignature(alicePrivateKey,
+        String buyer_signature = CryptoUtils.makeDigitalSignature(alicePrivateKey,
             transactionResponse.getTransactionId(),
             sellerId,
             buyerId,
@@ -518,16 +517,16 @@ public class ServerServiceTest {
             buyer_signature);
 
         // Verify Signature
-        ImmutablePair<PublicKey, byte[]> requestNotaryKey = hdsNotaryService.getNotaryPublicKey();
+        ImmutablePair<PublicKey, String> requestNotaryKey = hdsNotaryService.getNotaryPublicKey();
         PublicKey notaryPublicKey = requestNotaryKey.getLeft();
 
         serverValidation = CryptoUtils.verifyDigitalSignature(notaryPublicKey, transaction.getNotarySignature(),
             transaction.getTransactionId(), transaction.getSellerId(), transaction.getBuyerId(),
-            new String(transaction.getSellerSignature()),
-            new String(transaction.getBuyerSignature()));
+            transaction.getSellerSignature(),
+            transaction.getBuyerSignature());
         Assert.assertTrue(serverValidation);
 
-        byte[] seller_signature = CryptoUtils.makeDigitalSignature(bobPrivateKey,
+        String seller_signature = CryptoUtils.makeDigitalSignature(bobPrivateKey,
             transactionResponse.getTransactionId(),
             sellerId, buyerId, goodId);
 
@@ -535,8 +534,8 @@ public class ServerServiceTest {
         Assert.assertEquals(buyerId, transaction.getBuyerId());
         Assert.assertEquals(sellerId, transaction.getSellerId());
         Assert.assertEquals(goodId, transaction.getGoodId());
-        Assert.assertEquals(new String(buyer_signature), new String(transaction.getBuyerSignature()));
-        Assert.assertEquals(new String(seller_signature), new String(transaction.getSellerSignature()));
+        Assert.assertEquals(buyer_signature, transaction.getBuyerSignature());
+        Assert.assertEquals(seller_signature, transaction.getSellerSignature());
     }
 
 }

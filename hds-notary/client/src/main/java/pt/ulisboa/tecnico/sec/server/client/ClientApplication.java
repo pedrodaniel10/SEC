@@ -20,7 +20,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.server.client.services.ClientServiceImpl;
@@ -124,7 +123,7 @@ public class ClientApplication {
 
             logger.info("ClientService up at port " + registryPort);
 
-            ImmutablePair<PublicKey, byte[]> requestNotaryKey = hdsNotaryService.getNotaryPublicKey();
+            ImmutablePair<PublicKey, String> requestNotaryKey = hdsNotaryService.getNotaryPublicKey();
             notaryPublicKey = requestNotaryKey.getLeft();
 
             if (!CryptoUtils.verifyDigitalSignature(serverPublicKey, requestNotaryKey.getRight(),
@@ -179,9 +178,9 @@ public class ClientApplication {
         System.out.print("Enter goodId to buy: ");
         System.out.flush();
         String goodId = new Scanner(System.in).nextLine();
-        byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
+        String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
 
-        ImmutablePair<Good, byte[]> response = hdsNotaryService.getStateOfGood(user.getUserId(), goodId, nonce,
+        ImmutablePair<Good, String> response = hdsNotaryService.getStateOfGood(user.getUserId(), goodId, nonce, 0,
             signature);
 
         Good good = response.getLeft();
@@ -249,9 +248,9 @@ public class ClientApplication {
         System.out.println("Transaction Id: " + transaction.getTransactionId());
         System.out.println("Seller Id: " + transaction.getSellerId());
         System.out.println("Buyer Id: " + transaction.getBuyerId());
-        System.out.println("Seller Signature: " + Base64.encodeBase64String(transaction.getSellerSignature()));
-        System.out.println("Buyer Signature: " + Base64.encodeBase64String(transaction.getBuyerSignature()));
-        System.out.println("Notary Signature: " + Base64.encodeBase64String(transaction.getNotarySignature()));
+        System.out.println("Seller Signature: " + transaction.getSellerSignature());
+        System.out.println("Buyer Signature: " + transaction.getBuyerSignature());
+        System.out.println("Notary Signature: " + transaction.getNotarySignature());
     }
 
     private static void intentionToSell(User user, String nonce)
@@ -261,11 +260,9 @@ public class ClientApplication {
         System.out.print("Enter goodId to sell: ");
         System.out.flush();
         String goodId = new Scanner(System.in).nextLine();
-        byte[] signature =
-            CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId,
-                nonce);
+        String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
 
-        ImmutablePair<Boolean, byte[]> response = hdsNotaryService.intentionToSell(user.getUserId(), goodId, nonce,
+        ImmutablePair<Boolean, String> response = hdsNotaryService.intentionToSell(user.getUserId(), goodId, nonce, 0,
             signature);
 
         // Verify Signature
@@ -286,9 +283,9 @@ public class ClientApplication {
         System.out.print("Enter goodId: ");
         System.out.flush();
         String goodId = new Scanner(System.in).nextLine();
-        byte[] signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
+        String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
 
-        ImmutablePair<Good, byte[]> response = hdsNotaryService.getStateOfGood(user.getUserId(), goodId, nonce,
+        ImmutablePair<Good, String> response = hdsNotaryService.getStateOfGood(user.getUserId(), goodId, nonce, 0,
             signature);
         Good good = response.getLeft();
 

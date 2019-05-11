@@ -17,6 +17,6 @@ public interface ClientService extends Remote {
         String sellerId,
         String buyerId,
         String goodId,
-        byte[] buyerSignature)
+        String buyerSignature)
         throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException, SignatureException;
 }
