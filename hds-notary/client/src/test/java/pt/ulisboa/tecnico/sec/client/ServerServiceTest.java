@@ -14,16 +14,16 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import pt.ulisboa.tecnico.sec.library.HdsProperties;
-import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
-import pt.ulisboa.tecnico.sec.library.data.Good;
-import pt.ulisboa.tecnico.sec.library.data.Transaction;
-import pt.ulisboa.tecnico.sec.library.exceptions.GoodWrongOwnerException;
-import pt.ulisboa.tecnico.sec.library.exceptions.InvalidNonceException;
-import pt.ulisboa.tecnico.sec.library.exceptions.InvalidSignatureException;
-import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
-import pt.ulisboa.tecnico.sec.library.interfaces.client.ClientService;
-import pt.ulisboa.tecnico.sec.library.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.services.data.Good;
+import pt.ulisboa.tecnico.sec.services.data.Transaction;
+import pt.ulisboa.tecnico.sec.services.exceptions.GoodWrongOwnerException;
+import pt.ulisboa.tecnico.sec.services.exceptions.InvalidNonceException;
+import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
+import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
+import pt.ulisboa.tecnico.sec.services.interfaces.client.ClientService;
+import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
 
 /**
  * Unit test for ServerServiceTest.
@@ -45,11 +45,11 @@ public class ServerServiceTest {
         //new Thread(() -> ClientApplication.main(new String[]{"bob", "JNTpC0SE9Hzb3SG"})).start();
         //new Thread(() -> ClientApplication.main(new String[]{"charlie", "9QrKUNt9HAXPKG9"})).start();
 
-        alicePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("alice"), "Uvv1j7a60q2q0a4");
-        bobPrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("bob"), "JNTpC0SE9Hzb3SG");
-        charliePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("charlie"), "9QrKUNt9HAXPKG9");
-        serverPublicKey = CryptoUtils.getPublicKey(HdsProperties.getServerPublicKey());
-        hdsNotaryService = (HdsNotaryService) Naming.lookup(HdsProperties.getServerUri());
+        alicePrivateKey = HdsProperties.getClientPrivateKey("alice", "Uvv1j7a60q2q0a4");
+        bobPrivateKey = HdsProperties.getClientPrivateKey("bob", "JNTpC0SE9Hzb3SG");
+        charliePrivateKey = HdsProperties.getClientPrivateKey("charlie", "9QrKUNt9HAXPKG9");
+        serverPublicKey = HdsProperties.getServerPublicKey("0");
+        hdsNotaryService = (HdsNotaryService) Naming.lookup(HdsProperties.getServerUri("0"));
     }
 
     // Status of Good
@@ -538,5 +538,5 @@ public class ServerServiceTest {
         Assert.assertEquals(new String(buyer_signature), new String(transaction.getBuyerSignature()));
         Assert.assertEquals(new String(seller_signature), new String(transaction.getSellerSignature()));
     }
-    
+
 }

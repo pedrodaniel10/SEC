@@ -1,13 +1,11 @@
 package pt.ulisboa.tecnico.sec.server.services;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serializable;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,21 +14,23 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
-import pt.ulisboa.tecnico.sec.library.data.Good;
-import pt.ulisboa.tecnico.sec.library.data.Transaction;
-import pt.ulisboa.tecnico.sec.library.data.User;
-import pt.ulisboa.tecnico.sec.library.exceptions.GoodIsNotOnSaleException;
-import pt.ulisboa.tecnico.sec.library.exceptions.GoodNotFoundException;
-import pt.ulisboa.tecnico.sec.library.exceptions.GoodWrongOwnerException;
-import pt.ulisboa.tecnico.sec.library.exceptions.InvalidNonceException;
-import pt.ulisboa.tecnico.sec.library.exceptions.InvalidSignatureException;
-import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
-import pt.ulisboa.tecnico.sec.library.exceptions.TransactionDoesntExistsException;
-import pt.ulisboa.tecnico.sec.library.exceptions.UserNotFoundException;
-import pt.ulisboa.tecnico.sec.library.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.server.HdsNotaryApplication;
 import pt.ulisboa.tecnico.sec.server.utils.CcUtils;
 import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
+import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.services.data.Good;
+import pt.ulisboa.tecnico.sec.services.data.Transaction;
+import pt.ulisboa.tecnico.sec.services.data.User;
+import pt.ulisboa.tecnico.sec.services.exceptions.GoodIsNotOnSaleException;
+import pt.ulisboa.tecnico.sec.services.exceptions.GoodNotFoundException;
+import pt.ulisboa.tecnico.sec.services.exceptions.GoodWrongOwnerException;
+import pt.ulisboa.tecnico.sec.services.exceptions.InvalidNonceException;
+import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
+import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
+import pt.ulisboa.tecnico.sec.services.exceptions.TransactionDoesntExistsException;
+import pt.ulisboa.tecnico.sec.services.exceptions.UserNotFoundException;
+import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
 
 /**
@@ -38,25 +38,21 @@ import sun.security.pkcs11.wrapper.PKCS11Exception;
  */
 public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
+    private transient RSAPrivateKey serverPrivateKey;
+    private transient RSAPrivateKey notaryPrivateKey;
 
-    @JsonIgnore
-    RSAPrivateKey serverPrivateKey;
-    @JsonIgnore
-    RSAPublicKey notaryPublicKey;
+    private String id;
     private Map<String, Transaction> transactions = new ConcurrentHashMap<>();
     private Map<String, User> users = new ConcurrentHashMap<>();
     private Map<String, Good> goods = new ConcurrentHashMap<>();
     private Map<String, List<Transaction>> pendingTransactions = new ConcurrentHashMap<>();
-    // Get private key
-    private String privateKey;
 
     public HdsNotaryState() {
-        // Basic Constructor for Jackson's instantiation.
     }
 
     @Override
     public String getNonce(String userId) throws ServerException {
-        return getUserById(userId).getNonce();
+        return getUserById(userId).generateNonce();
     }
 
 
@@ -80,7 +76,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         User user = getUserById(sellerId);
 
         // Verify Signature
-        if (!CryptoUtils.verifyDigitalSignature(user.getPublicKey(), signature,
+        if (!CryptoUtils.verifyDigitalSignature(HdsProperties.getClientPublicKey(user.getName()), signature,
             sellerId, goodId, nonce)) {
             throw new InvalidSignatureException(
                 "Seller with id " + sellerId + " has signature invalid.");
@@ -106,7 +102,8 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Generate signature
         try {
-            byte[] serverSignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, goodId, Boolean.toString(true),
+            byte[] serverSignature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(), goodId,
+                Boolean.toString(true),
                 nonce);
             return new ImmutablePair<>(true, serverSignature);
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
@@ -140,7 +137,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Verify Signature
         if (!CryptoUtils
-            .verifyDigitalSignature(user.getPublicKey(), signature,
+            .verifyDigitalSignature(HdsProperties.getClientPublicKey(user.getName()), signature,
                 sellerId, buyerId, goodId, nonce)) {
             throw new InvalidSignatureException("IntentionToBuy: Signature is invalid.");
         }
@@ -177,7 +174,8 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Generate signature
         try {
-            byte[] serverSignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, transaction.getTransactionId(),
+            byte[] serverSignature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(),
+                transaction.getTransactionId(),
                 nonce);
             transaction.setNotarySignature(serverSignature);
             return transaction;
@@ -206,7 +204,8 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Verify Signature
         if (!CryptoUtils
-            .verifyDigitalSignature(user.getPublicKey(), signature, userId, goodId, nonce)) {
+            .verifyDigitalSignature(HdsProperties.getClientPublicKey(user.getName()), signature, userId, goodId,
+                nonce)) {
             throw new InvalidSignatureException("GetStateOfGood: Signature is invalid.");
         }
         Good good = this.goods.get(goodId);
@@ -219,7 +218,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Generate signature
         try {
-            byte[] serverSignature = CryptoUtils.makeDigitalSignature(serverPrivateKey, goodId,
+            byte[] serverSignature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(), goodId,
                 Boolean.toString(good.isOnSale()), nonce);
             return new ImmutablePair<>(good, serverSignature);
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
@@ -243,13 +242,13 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Verify Signature
         if (!CryptoUtils
-            .verifyDigitalSignature(userBuyer.getPublicKey(), buyerSignature,
+            .verifyDigitalSignature(HdsProperties.getClientPublicKey(userBuyer.getName()), buyerSignature,
                 transactionId, sellerId, buyerId, goodId)) {
             throw new InvalidSignatureException("Buyer signature is invalid.");
         }
 
         if (!CryptoUtils
-            .verifyDigitalSignature(userSeller.getPublicKey(), sellerSignature,
+            .verifyDigitalSignature(HdsProperties.getClientPublicKey(userSeller.getName()), sellerSignature,
                 transactionId, sellerId, buyerId, goodId)) {
             throw new InvalidSignatureException("Seller signature is invalid.");
         }
@@ -284,75 +283,68 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
             good.setOnSale(false);
         }
 
-        // Save State
-        PersistenceUtils.save();
-
         // Generate signature
         try {
-            byte[] notarySignature = CcUtils.signMessage(transactionId, sellerId,
-                buyerId, new String(sellerSignature), new String(buyerSignature));
+            byte[] notarySignature = new byte[]{};
+            if (HdsNotaryApplication.signWithCC) {
+                notarySignature = CcUtils.signMessage(
+                    transactionId,
+                    sellerId,
+                    buyerId,
+                    new String(sellerSignature),
+                    new String(buyerSignature));
+            } else {
+                notarySignature = CryptoUtils.makeDigitalSignature(getNotaryPrivateKey(),
+                    transactionId,
+                    sellerId,
+                    buyerId,
+                    new String(sellerSignature),
+                    new String(buyerSignature));
+            }
             transaction.get().setNotarySignature(notarySignature);
+
+            // Save State
+            PersistenceUtils.save();
+
             return transaction.get();
-        } catch (PKCS11Exception e) {
+        } catch (PKCS11Exception | NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             e.printStackTrace();
             throw new InvalidSignatureException("Notary was unable to sign the message.");
         }
+
     }
 
     @Override
     public ImmutablePair<PublicKey, byte[]> getNotaryPublicKey()
         throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        byte[] signature = CryptoUtils.makeDigitalSignature(this.serverPrivateKey,
-            new String(CcUtils.getNotaryPublicKey().getEncoded()));
 
-        return new ImmutablePair<>(CcUtils.getNotaryPublicKey(), signature);
+        PublicKey publicKey;
+        if (HdsNotaryApplication.signWithCC) {
+            publicKey = CcUtils.getNotaryPublicKey();
+        } else {
+            publicKey = HdsProperties.getNotarySignaturePublicKey(this.id);
+        }
+        String encodedPublicKey = new String(publicKey.getEncoded());
+        byte[] signature = CryptoUtils.makeDigitalSignature(this.getServerPrivateKey(), encodedPublicKey);
+
+        return new ImmutablePair<>(publicKey, signature);
+
     }
 
-    public void setNotaryPublicKey(RSAPublicKey rsa) {
+    public RSAPrivateKey getServerPrivateKey() {
+        if (this.serverPrivateKey == null) {
+            this.serverPrivateKey = HdsProperties.getServerPrivateKey(this.id, HdsNotaryApplication.serverPassword);
+        }
+        return this.serverPrivateKey;
     }
 
 
-    public Map<String, Transaction> getTransactions() {
-        return transactions;
-    }
-
-    public void setTransactions(Map<String, Transaction> transactions) {
-        this.transactions = transactions;
-    }
-
-    public Map<String, User> getUsers() {
-        return users;
-    }
-
-    public void setUsers(Map<String, User> users) {
-        this.users = users;
-    }
-
-    public Map<String, Good> getGoods() {
-        return goods;
-    }
-
-    public void setGoods(Map<String, Good> goods) {
-        this.goods = goods;
-    }
-
-    public Map<String, List<Transaction>> getPendingTransactions() {
-        return pendingTransactions;
-    }
-
-    public void setPendingTransactions(
-        Map<String, List<Transaction>> pendingTransactions) {
-        this.pendingTransactions = pendingTransactions;
-    }
-
-    public String getPrivateKey() {
-        return privateKey;
-    }
-
-    public void setPrivateKey(String privateKey) {
-        String password = "admin";
-        this.privateKey = privateKey;
-        this.serverPrivateKey = CryptoUtils.getPrivateKey(privateKey, password);
+    public RSAPrivateKey getNotaryPrivateKey() {
+        if (this.notaryPrivateKey == null) {
+            this.notaryPrivateKey = HdsProperties.getNotarySignaturePrivateKey(this.id,
+                HdsNotaryApplication.notaryPassword);
+        }
+        return this.notaryPrivateKey;
     }
 
     private List<Transaction> getGoodsPendingTransaction(Good good) {

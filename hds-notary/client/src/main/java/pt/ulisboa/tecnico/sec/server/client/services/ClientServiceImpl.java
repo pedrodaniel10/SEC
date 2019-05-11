@@ -7,11 +7,11 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.interfaces.RSAPrivateKey;
-import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
-import pt.ulisboa.tecnico.sec.library.data.Transaction;
-import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
-import pt.ulisboa.tecnico.sec.library.interfaces.client.ClientService;
-import pt.ulisboa.tecnico.sec.library.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.services.data.Transaction;
+import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
+import pt.ulisboa.tecnico.sec.services.interfaces.client.ClientService;
+import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
 
 public class ClientServiceImpl extends UnicastRemoteObject implements ClientService, Serializable {
 

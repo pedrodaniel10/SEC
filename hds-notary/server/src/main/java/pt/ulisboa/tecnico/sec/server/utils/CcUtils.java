@@ -20,7 +20,7 @@ import sun.security.pkcs11.wrapper.PKCS11;
 import sun.security.pkcs11.wrapper.PKCS11Constants;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
 
-public class CcUtils {
+public final class CcUtils {
 
     private static final Logger logger = Logger.getLogger(CcUtils.class);
     private static long p11Session;

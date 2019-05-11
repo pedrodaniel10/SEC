@@ -1,0 +1,48 @@
+{
+	"id": "0",
+	"transactions": {},
+	"users": {
+		"0": {
+			"name": "alice",
+			"userId": "0",
+			"nonce": "0"
+		},
+		"1": {
+			"name": "bob",
+			"userId": "1",
+			"nonce": "0"
+		},
+		"2": {
+			"name": "charlie",
+			"userId": "2",
+			"nonce": "0"
+		}
+	},
+	"goods": {
+		"0": {
+			"name": "House",
+			"goodId": "0",
+			"ownerId": "2",
+			"onSale": false,
+			"timeStamp": 0,
+			"listening": {}
+		},
+		"1": {
+			"name": "Computer",
+			"goodId": "1",
+			"ownerId": "0",
+			"onSale": false,
+			"timeStamp": 0,
+			"listening": {}
+		},
+		"2": {
+			"name": "Bed",
+			"goodId": "2",
+			"ownerId": "1",
+			"onSale": true,
+			"timeStamp": 0,
+			"listening": {}
+		}
+	},
+	"pendingTransactions": {}
+}

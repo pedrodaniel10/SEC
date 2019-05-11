@@ -13,20 +13,27 @@ import java.security.SignatureException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Scanner;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
-import pt.ulisboa.tecnico.sec.library.HdsProperties;
-import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
-import pt.ulisboa.tecnico.sec.library.data.Good;
-import pt.ulisboa.tecnico.sec.library.data.Transaction;
-import pt.ulisboa.tecnico.sec.library.data.User;
-import pt.ulisboa.tecnico.sec.library.exceptions.InvalidSignatureException;
-import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
-import pt.ulisboa.tecnico.sec.library.exceptions.UserNotFoundException;
-import pt.ulisboa.tecnico.sec.library.interfaces.client.ClientService;
-import pt.ulisboa.tecnico.sec.library.interfaces.server.HdsNotaryService;
 import pt.ulisboa.tecnico.sec.server.client.services.ClientServiceImpl;
+import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.services.data.Good;
+import pt.ulisboa.tecnico.sec.services.data.Transaction;
+import pt.ulisboa.tecnico.sec.services.data.User;
+import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
+import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
+import pt.ulisboa.tecnico.sec.services.exceptions.UserNotFoundException;
+import pt.ulisboa.tecnico.sec.services.interfaces.client.ClientService;
+import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
 
 /**
  * ClientApplication main class
@@ -42,18 +49,51 @@ public class ClientApplication {
     private static HdsNotaryService hdsNotaryService;
 
     public static void main(String[] args) {
-        String username;
-        String password;
-        if (args.length == 2) {
-            username = args[0];
-            password = args[1];
-        } else {
-            System.out.print("Enter username: ");
-            System.out.flush();
-            username = new Scanner(System.in).nextLine();
-            System.out.print("Enter password: ");
-            System.out.flush();
-            password = new Scanner(System.in).nextLine();
+        // create the command line parser
+        CommandLineParser parser = new DefaultParser();
+
+        // create the Options
+        Options options = new Options();
+        options.addOption(new Option("help", "Prints this message"));
+        options.addOption(Option.builder("u").longOpt("username").argName("username").desc(
+            "The name of the user to login.").hasArg().build());
+        options.addOption(Option.builder("p").longOpt("password").argName("password").desc(
+            "The password of the user to login.").hasArg().build());
+
+        // automatically generate the help statement
+        HelpFormatter formatter = new HelpFormatter();
+
+        String username = "";
+        String password = "";
+        try {
+            CommandLine line = parser.parse(options, args);
+
+            // Help
+            if (line.hasOption("help")) {
+                formatter.printHelp("HDS-Client", options, true);
+                System.exit(0);
+            }
+
+            if (line.hasOption("username")) {
+                username = line.getOptionValue("username");
+            } else {
+                System.out.print("Enter username: ");
+                System.out.flush();
+                username = new Scanner(System.in).nextLine();
+            }
+
+            if (line.hasOption("password")) {
+                password = line.getOptionValue("password");
+            } else {
+                System.out.print("Enter password: ");
+                System.out.flush();
+                password = new Scanner(System.in).nextLine();
+            }
+
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("HDS-Client", options, true);
+            System.exit(1);
         }
 
         // Get user
@@ -66,13 +106,13 @@ public class ClientApplication {
         }
 
         //Get Server Public Key
-        serverPublicKey = CryptoUtils.getPublicKey(HdsProperties.getServerPublicKey());
+        serverPublicKey = HdsProperties.getServerPublicKey("0");
 
         // Get private key
-        privateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey(user.getName()), password);
+        privateKey = HdsProperties.getClientPrivateKey(user.getName(), password);
 
         try {
-            hdsNotaryService = (HdsNotaryService) Naming.lookup(HdsProperties.getServerUri());
+            hdsNotaryService = (HdsNotaryService) Naming.lookup(HdsProperties.getServerUri("0"));
 
             // Setup P2P service
             ClientService clientService = new ClientServiceImpl(hdsNotaryService, privateKey);
@@ -195,12 +235,14 @@ public class ClientApplication {
             signature);
 
         // Verify Signature
-        if (!CryptoUtils.verifyDigitalSignature(notaryPublicKey, transaction.getNotarySignature(),
+        if (!CryptoUtils.verifyDigitalSignature(notaryPublicKey,
+            transaction.getNotarySignature(),
             transaction.getTransactionId(),
-            transaction.getSellerId(), transaction.getBuyerId(), new String(transaction.getSellerSignature()),
+            transaction.getSellerId(),
+            transaction.getBuyerId(),
+            new String(transaction.getSellerSignature()),
             new String(transaction.getBuyerSignature()))) {
-            throw new InvalidSignatureException(
-                "BuyGood: Seller has signature invalid.");
+            throw new InvalidSignatureException("BuyGood: Transaction has signature invalid.");
         }
 
         System.out.println("Good with id " + goodId + " bought!");

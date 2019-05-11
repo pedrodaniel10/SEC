@@ -8,10 +8,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import pt.ulisboa.tecnico.sec.library.data.Good;
-import pt.ulisboa.tecnico.sec.library.data.Transaction;
-import pt.ulisboa.tecnico.sec.library.exceptions.ServerException;
-import pt.ulisboa.tecnico.sec.library.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.services.data.Good;
+import pt.ulisboa.tecnico.sec.services.data.Transaction;
+import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
+import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
 import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
 
 /**

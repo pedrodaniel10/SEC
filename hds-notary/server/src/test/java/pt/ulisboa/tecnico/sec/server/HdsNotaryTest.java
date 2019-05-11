@@ -9,9 +9,9 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import org.junit.Before;
 import org.junit.Test;
-import pt.ulisboa.tecnico.sec.library.HdsProperties;
-import pt.ulisboa.tecnico.sec.library.crypto.CryptoUtils;
-import pt.ulisboa.tecnico.sec.library.exceptions.UserNotFoundException;
+import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
+import pt.ulisboa.tecnico.sec.services.exceptions.UserNotFoundException;
 import pt.ulisboa.tecnico.sec.server.services.HdsNotaryState;
 import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
 
@@ -30,14 +30,14 @@ public class HdsNotaryTest {
 
     @Before
     public void setup() throws UserNotFoundException {
-        alicePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("alice"), "Uvv1j7a60q2q0a4");
-        bobPrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("bob"), "JNTpC0SE9Hzb3SG");
-        charliePrivateKey = CryptoUtils.getPrivateKey(HdsProperties.getClientPrivateKey("charlie"), "9QrKUNt9HAXPKG9");
+        alicePrivateKey = HdsProperties.getClientPrivateKey("alice", "Uvv1j7a60q2q0a4");
+        bobPrivateKey = HdsProperties.getClientPrivateKey("bob", "JNTpC0SE9Hzb3SG");
+        charliePrivateKey = HdsProperties.getClientPrivateKey("charlie", "9QrKUNt9HAXPKG9");
 
         final HdsNotaryState serverState = PersistenceUtils.getServerState();
-        alicePublicKey = serverState.getUserById("0").getPublicKey();
-        bobPublicKey = serverState.getUserById("1").getPublicKey();
-        charliePublicKey = serverState.getUserById("2").getPublicKey();
+        alicePublicKey = HdsProperties.getClientPublicKey("alice");
+        bobPublicKey = HdsProperties.getClientPublicKey("bob");
+        charliePublicKey = HdsProperties.getClientPublicKey("charlie");
     }
 
     @Test

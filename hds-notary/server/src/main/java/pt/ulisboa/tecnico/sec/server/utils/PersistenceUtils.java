@@ -1,7 +1,10 @@
 package pt.ulisboa.tecnico.sec.server.utils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import org.apache.commons.io.FileUtils;
@@ -25,11 +28,13 @@ public final class PersistenceUtils {
 
     private static HdsNotaryState serverState;
 
-    // Initialize variables
-    static {
+    private PersistenceUtils() {
+    }
+
+    public static void init(String serverId) {
         try {
-            dataFile = new File(IOUtils.resourceToURL(DATA_FILE, classLoader).toURI());
-            dataBackupFile = new File(IOUtils.resourceToURL(DATA_BACKUP_FILE, classLoader).toURI());
+            dataFile = new File(IOUtils.resourceToURL(serverId + DATA_FILE, classLoader).toURI());
+            dataBackupFile = new File(IOUtils.resourceToURL(serverId + DATA_BACKUP_FILE, classLoader).toURI());
         } catch (URISyntaxException | IOException e) {
             logger.error(e);
         }
@@ -37,23 +42,20 @@ public final class PersistenceUtils {
         serverState = getServerState();
     }
 
-    private PersistenceUtils() {
-    }
-
     public static HdsNotaryState getServerState() {
         if (serverState != null) {
             return serverState;
         }
 
-        ObjectMapper mapper = new ObjectMapper();
+        Gson mapper = new Gson();
 
         try {
-            serverState = mapper.readValue(dataFile, HdsNotaryState.class);
+            serverState = mapper.fromJson(new JsonReader(new FileReader(dataFile)), HdsNotaryState.class);
         } catch (IOException e) {
             // File might be corrupted, try to load backup file
             logger.error(e);
             try {
-                serverState = mapper.readValue(dataBackupFile, HdsNotaryState.class);
+                serverState = mapper.fromJson(new JsonReader(new FileReader(dataBackupFile)), HdsNotaryState.class);
             } catch (IOException ex) {
                 // Something went terrible wrong.
                 logger.error(ex);
@@ -64,11 +66,8 @@ public final class PersistenceUtils {
     }
 
     public static synchronized void save() {
-        ObjectMapper mapper = new ObjectMapper();
-
         try {
-            String jsonInString = mapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(serverState);
+            String jsonInString = new GsonBuilder().setPrettyPrinting().create().toJson(serverState);
 
             FileUtils.writeStringToFile(dataFile, jsonInString, (String) null);
             FileUtils.writeStringToFile(dataBackupFile, jsonInString, (String) null);
