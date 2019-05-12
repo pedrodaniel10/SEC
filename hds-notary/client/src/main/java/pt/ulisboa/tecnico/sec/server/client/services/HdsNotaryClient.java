@@ -1,0 +1,275 @@
+package pt.ulisboa.tecnico.sec.server.client.services;
+
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.SignatureException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CountDownLatch;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.log4j.Logger;
+import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.services.data.Good;
+import pt.ulisboa.tecnico.sec.services.data.Transaction;
+import pt.ulisboa.tecnico.sec.services.data.User;
+import pt.ulisboa.tecnico.sec.services.exceptions.GoodIsNotOnSaleException;
+import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
+import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
+import pt.ulisboa.tecnico.sec.services.interfaces.client.ClientService;
+import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
+import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
+import pt.ulisboa.tecnico.sec.services.utils.Constants;
+
+public class HdsNotaryClient {
+
+    private static final Logger logger = Logger.getLogger(HdsNotaryClient.class);
+
+    private static RSAPrivateKey privateKey;
+    private static Map<String, RSAPublicKey> serverPublicKey = new HashMap<>();
+    private static Map<String, PublicKey> notaryPublicKey = new HashMap<>();
+    private static Map<String, HdsNotaryService> hdsNotaryService = new HashMap<>();
+
+    public static void init(User user, String username, String password) {
+        // Get user private key
+        privateKey = HdsProperties.getClientPrivateKey(user.getName(), password);
+
+        // Fill servers public keys
+        fillServerPublicKey();
+
+        // Fill services RMI
+        fillHdsNotaryService();
+
+        // Fill notary public keys
+        fillNotaryPublicKey();
+
+        // Setup P2P service
+        try {
+            ClientService clientService = new ClientServiceImpl(hdsNotaryService, privateKey);
+            final int registryPort = HdsProperties.getClientPort(username);
+            final Registry reg = LocateRegistry.createRegistry(registryPort);
+
+            reg.rebind("ClientService", clientService);
+
+            logger.info("ClientService up at port " + registryPort);
+        } catch (RemoteException e) {
+            logger.error(e);
+        }
+
+    }
+
+    public static Optional<Transaction> buyGood(User user, String goodId)
+        throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException,
+               SignatureException, NotBoundException, MalformedURLException, InterruptedException {
+
+        Good good = getStateOfGood(user, goodId).get();
+
+        if (!good.isOnSale()) {
+            throw new GoodIsNotOnSaleException("The good with id " + goodId + " is not on sale.");
+        }
+
+        // Intention to buy
+        final List<Transaction> transactionResponse = intentionToBuy(user, good);
+
+        // Buy good
+        ClientService clientServiceSeller =
+            (ClientService) Naming.lookup(HdsProperties.getClientUri(good.getOwnerId()));
+
+        for (Transaction transaction : transactionResponse) {
+            transaction.setBuyerSignature(CryptoUtils.makeDigitalSignature(privateKey,
+                transaction.getTransactionId(),
+                transaction.getSellerId(),
+                transaction.getBuyerId(),
+                transaction.getGoodId()));
+        }
+
+        List<Transaction> transactions = clientServiceSeller.buy(transactionResponse);
+
+        // Verify Signatures
+        for (Transaction transaction : transactions) {
+            if (!CryptoUtils.verifyDigitalSignature(notaryPublicKey.get(transaction.getServerId()),
+                transaction.getNotarySignature(),
+                transaction.getTransactionId(),
+                transaction.getSellerId(),
+                transaction.getBuyerId(),
+                transaction.getSellerSignature(),
+                transaction.getBuyerSignature())) {
+                throw new InvalidSignatureException("BuyGood: Transaction has signature invalid.");
+            }
+        }
+
+        return transactions.stream().findFirst();
+    }
+
+    public static List<Transaction> intentionToBuy(User user, Good good) throws InterruptedException {
+        ConcurrentLinkedDeque<Transaction> transactionResponse = new ConcurrentLinkedDeque<>();
+        CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+
+        for (Map.Entry<String, HdsNotaryService> entry : hdsNotaryService.entrySet()) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String nonce = entry.getValue().getNonce(user.getUserId());
+                    String signature = CryptoUtils.makeDigitalSignature(privateKey, good.getOwnerId(), user.getUserId(),
+                        good.getGoodId(), nonce);
+
+                    final ImmutablePair<Transaction, String> response = entry.getValue()
+                        .intentionToBuy(
+                            good.getOwnerId(),
+                            user.getUserId(),
+                            good.getGoodId(),
+                            nonce,
+                            signature);
+
+                    // Verify Signature
+                    if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(entry.getKey()),
+                        response.getRight(),
+                        response.getLeft().getTransactionId(), nonce)) {
+                        throw new InvalidSignatureException("IntentionToBuy: Server has signature invalid.");
+                    }
+
+                    transactionResponse.add(response.getLeft());
+                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException e) {
+                    logger.error("Error on server id " + entry.getKey(), e);
+                }
+                latch.countDown();
+            });
+
+        }
+
+        latch.await();
+        final ArrayList<Transaction> transactions = new ArrayList<>(transactionResponse);
+        if (transactions.size() <= (Constants.N + Constants.F) / 2) {
+            return new ArrayList<>();
+        }
+        return transactions;
+    }
+
+    public static boolean intentionToSell(User user, String goodId) throws InterruptedException {
+        ConcurrentLinkedDeque<Boolean> returnValue = new ConcurrentLinkedDeque<>();
+        CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+
+        for (Map.Entry<String, HdsNotaryService> entry : hdsNotaryService.entrySet()) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String nonce = entry.getValue().getNonce(user.getUserId());
+
+                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
+
+                    ImmutablePair<Boolean, String> response = entry.getValue().intentionToSell(user.getUserId(), goodId,
+                        nonce,
+                        0,
+                        signature);
+
+                    // Verify Signature
+                    if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(entry.getKey()), response.getRight(),
+                        goodId,
+                        Boolean.toString(response.getLeft()), nonce)) {
+                        throw new InvalidSignatureException("Server has signature invalid.");
+                    }
+
+                    if (response.getLeft()) {
+                        returnValue.add(response.getLeft());
+                    }
+                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException e) {
+                    logger.error("Error on server id " + entry.getKey(), e);
+                }
+                latch.countDown();
+            });
+        }
+        latch.await();
+
+        return (returnValue.size() > (Constants.N + Constants.F) / 2);
+    }
+
+    public static Optional<Good> getStateOfGood(User user, String goodId) throws InterruptedException {
+        ConcurrentLinkedDeque<Good> goods = new ConcurrentLinkedDeque<>();
+        CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+
+        for (Map.Entry<String, HdsNotaryService> entry : hdsNotaryService.entrySet()) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String nonce = entry.getValue().getNonce(user.getUserId());
+
+                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
+
+                    ImmutablePair<Good, String> response = entry.getValue().getStateOfGood(
+                        user.getUserId(),
+                        goodId,
+                        nonce,
+                        0,
+                        signature);
+                    Good good = response.getLeft();
+
+                    // Verify Signature
+                    if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(entry.getKey()),
+                        response.getRight(),
+                        goodId,
+                        Boolean.toString(good.isOnSale()),
+                        nonce)) {
+                        throw new InvalidSignatureException("Server has signature invalid.");
+                    }
+                    goods.add(good);
+                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException e) {
+                    logger.error("Error on server id " + entry.getKey(), e);
+                }
+                latch.countDown();
+            });
+        }
+        latch.await();
+
+        return goods.stream().findFirst();
+    }
+
+    private static void fillServerPublicKey() {
+        for (int i = 0; i < Constants.N; i++) {
+            String id = "" + i;
+            serverPublicKey.put(id, HdsProperties.getServerPublicKey(id));
+        }
+    }
+
+
+    private static void fillHdsNotaryService() {
+        for (int i = 0; i < Constants.N; i++) {
+            String id = "" + i;
+            try {
+                hdsNotaryService.put(id, (HdsNotaryService) Naming.lookup(HdsProperties.getServerUri(id)));
+            } catch (NotBoundException | MalformedURLException | RemoteException e) {
+                logger.error(e);
+            }
+        }
+    }
+
+    private static void fillNotaryPublicKey() {
+        hdsNotaryService.forEach((id, service) -> {
+            try {
+                ImmutablePair<PublicKey, String> requestNotaryKey = service.getNotaryPublicKey();
+
+                final PublicKey key = requestNotaryKey.getLeft();
+
+                if (CryptoUtils.verifyDigitalSignature(serverPublicKey.get(id),
+                    requestNotaryKey.getRight(),
+                    new String(key.getEncoded()))) {
+                    notaryPublicKey.put(id, key);
+                } else {
+                    logger.error("Notary Public Key " + "(id=" + id + ") signature doesn't match.");
+                }
+            } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+                logger.error(e);
+            }
+        });
+
+    }
+}

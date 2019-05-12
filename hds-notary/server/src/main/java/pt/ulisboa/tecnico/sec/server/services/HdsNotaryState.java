@@ -41,7 +41,6 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
     private transient RSAPrivateKey serverPrivateKey;
     private transient RSAPrivateKey notaryPrivateKey;
 
-    private String id;
     private Map<String, Transaction> transactions = new ConcurrentHashMap<>();
     private Map<String, User> users = new ConcurrentHashMap<>();
     private Map<String, Good> goods = new ConcurrentHashMap<>();
@@ -129,7 +128,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
      * @throws GoodWrongOwnerException  if the good doesn't belong to the provided sellerId.
      */
     @Override
-    public Transaction intentionToBuy(String sellerId,
+    public ImmutablePair<Transaction, String> intentionToBuy(String sellerId,
         String buyerId,
         String goodId,
         String nonce,
@@ -169,7 +168,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
             transaction = existingTransaction.get();
         } else {
             String transactionId = UUID.randomUUID().toString();
-            transaction = new Transaction(transactionId, sellerId, buyerId, goodId);
+            transaction = new Transaction(transactionId, HdsNotaryApplication.serverId, sellerId, buyerId, goodId);
             pendingGoodTransactions.add(transaction);
 
             // Save State
@@ -181,8 +180,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
             String serverSignature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(),
                 transaction.getTransactionId(),
                 nonce);
-            transaction.setNotarySignature(serverSignature);
-            return transaction;
+            return new ImmutablePair<>(transaction, serverSignature);
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             throw new InvalidSignatureException("Server was unable to sign the message.");
         }
@@ -255,7 +253,10 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         if (!CryptoUtils
             .verifyDigitalSignature(HdsProperties.getClientPublicKey(userBuyer.getName()),
                 transaction.getBuyerSignature(),
-                transactionId, sellerId, buyerId, goodId)) {
+                transactionId,
+                sellerId,
+                buyerId,
+                goodId)) {
             throw new InvalidSignatureException("Buyer signature is invalid.");
         }
 
@@ -334,7 +335,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         if (HdsNotaryApplication.signWithCC) {
             publicKey = CcUtils.getNotaryPublicKey();
         } else {
-            publicKey = HdsProperties.getNotarySignaturePublicKey(this.id);
+            publicKey = HdsProperties.getNotarySignaturePublicKey(HdsNotaryApplication.serverId);
         }
         String encodedPublicKey = new String(publicKey.getEncoded());
         String signature = CryptoUtils.makeDigitalSignature(this.getServerPrivateKey(), encodedPublicKey);
@@ -345,7 +346,8 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
     public RSAPrivateKey getServerPrivateKey() {
         if (this.serverPrivateKey == null) {
-            this.serverPrivateKey = HdsProperties.getServerPrivateKey(this.id, HdsNotaryApplication.serverPassword);
+            this.serverPrivateKey = HdsProperties.getServerPrivateKey(HdsNotaryApplication.serverId,
+                HdsNotaryApplication.serverPassword);
         }
         return this.serverPrivateKey;
     }
@@ -353,7 +355,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
     public RSAPrivateKey getNotaryPrivateKey() {
         if (this.notaryPrivateKey == null) {
-            this.notaryPrivateKey = HdsProperties.getNotarySignaturePrivateKey(this.id,
+            this.notaryPrivateKey = HdsProperties.getNotarySignaturePrivateKey(HdsNotaryApplication.serverId,
                 HdsNotaryApplication.notaryPassword);
         }
         return this.notaryPrivateKey;

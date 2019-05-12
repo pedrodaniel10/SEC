@@ -5,6 +5,7 @@ import java.rmi.RemoteException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
+import java.util.List;
 import pt.ulisboa.tecnico.sec.services.data.Transaction;
 import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
 
@@ -13,10 +14,7 @@ import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
  */
 public interface ClientService extends Remote {
 
-    Transaction buy(String transactionId,
-        String sellerId,
-        String buyerId,
-        String goodId,
-        String buyerSignature)
-        throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException, SignatureException;
+    List<Transaction> buy(List<Transaction> transactions)
+        throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException, SignatureException,
+               InterruptedException;
 }

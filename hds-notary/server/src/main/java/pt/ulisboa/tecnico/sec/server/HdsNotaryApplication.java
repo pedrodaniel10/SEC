@@ -25,6 +25,7 @@ public class HdsNotaryApplication {
     private static final Logger logger = Logger.getLogger(HdsNotaryApplication.class);
 
     public static boolean signWithCC = true;
+    public static String serverId;
     public static String serverPassword;
     public static String notaryPassword;
 
@@ -60,7 +61,7 @@ public class HdsNotaryApplication {
         // automatically generate the help statement
         HelpFormatter formatter = new HelpFormatter();
 
-        String serverId = "";
+        serverId = "";
         try {
             CommandLine line = parser.parse(options, args);
 

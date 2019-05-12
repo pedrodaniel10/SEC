@@ -25,7 +25,7 @@ public interface HdsNotaryService extends Remote {
         String signature)
         throws RemoteException, ServerException;
 
-    Transaction intentionToBuy(String sellerId, String buyerId, String goodId, String nonce, String signature)
+    ImmutablePair<Transaction, String> intentionToBuy(String sellerId, String buyerId, String goodId, String nonce, String signature)
         throws RemoteException, ServerException;
 
     ImmutablePair<Good, String> getStateOfGood(String userId,
