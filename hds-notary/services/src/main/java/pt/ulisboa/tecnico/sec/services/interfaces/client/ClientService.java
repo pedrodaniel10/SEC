@@ -14,7 +14,7 @@ import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
  */
 public interface ClientService extends Remote {
 
-    List<Transaction> buy(List<Transaction> transactions)
+    List<Transaction> buy(String goodId, List<Transaction> transactions)
         throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException, SignatureException,
                InterruptedException;
 }

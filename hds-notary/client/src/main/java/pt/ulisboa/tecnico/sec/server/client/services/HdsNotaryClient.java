@@ -114,7 +114,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                 transaction.getGoodId()));
         }
 
-        List<Transaction> transactions = clientServiceSeller.buy(transactionResponse);
+        List<Transaction> transactions = clientServiceSeller.buy(goodId, transactionResponse);
 
         // Verify Signatures
         for (Transaction transaction : transactions) {
@@ -179,16 +179,19 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
         ConcurrentLinkedDeque<Boolean> returnValue = new ConcurrentLinkedDeque<>();
         CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
 
+        final Optional<Good> stateOfGood = getStateOfGood(user, goodId);
+
         for (Map.Entry<String, HdsNotaryService> entry : hdsNotaryService.entrySet()) {
             CompletableFuture.runAsync(() -> {
                 try {
+
                     String nonce = entry.getValue().getNonce(user.getUserId());
 
                     String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
 
                     ImmutablePair<Boolean, String> response = entry.getValue().intentionToSell(user.getUserId(), goodId,
                         nonce,
-                        0,
+                        stateOfGood.get().getTimeStamp() + 1,
                         signature);
 
                     // Verify Signature
@@ -239,6 +242,9 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                     logger.error("Error on server id " + entry.getKey(), e);
                 }
                 latchResponses.countDown();
+            }).exceptionally(e -> {
+                logger.error(e);
+                return null;
             });
         }
         // Wait responses
@@ -326,7 +332,6 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
     @Override
     public synchronized void setStateOfGood(String serverId, Good good, int readId, int timeStamp, String signature)
         throws InvalidSignatureException {
-        logger.debug("Called SetStateOfGood: " + serverId);
         // Verify Signature
         if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(serverId),
             signature,
@@ -338,7 +343,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
         }
 
         answers.putIfAbsent(timeStamp, new ConcurrentHashMap<>());
-        answers.get(timeStamp).putIfAbsent(serverId, good);
+        answers.get(timeStamp).put(serverId, good);
 
         // Count answers
         for (Map.Entry<Integer, Map<String, Good>> entry : answers.entrySet()) {

@@ -15,9 +15,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.server.HdsNotaryApplication;
 import pt.ulisboa.tecnico.sec.server.utils.CcUtils;
 import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
@@ -33,6 +35,7 @@ import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
 import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.services.exceptions.TransactionDoesntExistsException;
 import pt.ulisboa.tecnico.sec.services.exceptions.UserNotFoundException;
+import pt.ulisboa.tecnico.sec.services.exceptions.WrongTimeStampException;
 import pt.ulisboa.tecnico.sec.services.interfaces.client.ReadBonarService;
 import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
 import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
@@ -42,6 +45,8 @@ import sun.security.pkcs11.wrapper.PKCS11Exception;
  * Logic of the service.
  */
 public final class HdsNotaryState implements HdsNotaryService, Serializable {
+
+    private static final Logger logger = Logger.getLogger(HdsNotaryState.class);
 
     private transient RSAPrivateKey serverPrivateKey;
     private transient RSAPrivateKey notaryPrivateKey;
@@ -79,7 +84,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         int timeStamp,
         String signature)
         throws GoodNotFoundException, GoodWrongOwnerException, UserNotFoundException, InvalidNonceException,
-               InvalidSignatureException {
+               InvalidSignatureException, WrongTimeStampException {
 
         User user = getUserById(sellerId);
 
@@ -102,7 +107,14 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
                     + ".");
         }
 
+        if (timeStamp <= good.getTimeStamp()) {
+            throw new WrongTimeStampException("The timestamp is below or equal.");
+        }
+
         good.setOnSale(true);
+        good.setTimeStamp(timeStamp);
+        multicastWriteForReaders(good);
+
         user.generateNonce();
 
         // Save State
@@ -230,6 +242,14 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         good.getListening().put(userId, readId);
         user.generateNonce();
 
+        setStateOfGood(userId, readId, good);
+        return;
+    }
+
+    private void setStateOfGood(String userId, int readId, Good good)
+        throws NotBoundException, MalformedURLException, RemoteException, UserNotFoundException,
+               NoSuchAlgorithmException, InvalidKeyException, SignatureException, InvalidSignatureException {
+        String signature;
         ReadBonarService readBonarService = (ReadBonarService) Naming.lookup(
             HdsProperties.getClientBonarUri(userId));
 
@@ -254,7 +274,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
     public Transaction transferGood(Transaction transaction, int timeStamp, String signature)
         throws GoodNotFoundException, TransactionDoesntExistsException, GoodWrongOwnerException,
                GoodIsNotOnSaleException,
-               UserNotFoundException, InvalidSignatureException {
+               UserNotFoundException, InvalidSignatureException, WrongTimeStampException {
 
         String transactionId = transaction.getTransactionId();
         String sellerId = transaction.getSellerId();
@@ -286,6 +306,10 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         Good good = this.getGood(goodId);
 
+        if (timeStamp <= good.getTimeStamp()) {
+            throw new WrongTimeStampException("The timestamp is below or equal.");
+        }
+
         final List<Transaction> pendingGoodTransactions = this.getGoodsPendingTransaction(good);
 
         final Optional<Transaction> transactionResponse = pendingGoodTransactions.stream()
@@ -312,7 +336,10 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
             pendingGoodTransactions.clear();
             good.setOwnerId(buyerId);
             good.setOnSale(false);
+            good.setTimeStamp(timeStamp);
         }
+
+        multicastWriteForReaders(good);
 
         // Generate signature
         try {
@@ -343,6 +370,19 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
             throw new InvalidSignatureException("Notary was unable to sign the message.");
         }
 
+    }
+
+    private void multicastWriteForReaders(Good good) {
+        for (Map.Entry<String, Integer> entry : good.getListening().entrySet()) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    setStateOfGood(entry.getKey(), entry.getValue(), good);
+                } catch (NotBoundException | MalformedURLException | RemoteException | UserNotFoundException
+                    | NoSuchAlgorithmException | InvalidKeyException | SignatureException | InvalidSignatureException e) {
+                    logger.error(e);
+                }
+            });
+        }
     }
 
     @Override

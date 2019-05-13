@@ -10,12 +10,16 @@ import java.security.interfaces.RSAPrivateKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import org.apache.log4j.Logger;
+import pt.ulisboa.tecnico.sec.server.client.ClientApplication;
 import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
+import pt.ulisboa.tecnico.sec.services.data.Good;
 import pt.ulisboa.tecnico.sec.services.data.Transaction;
+import pt.ulisboa.tecnico.sec.services.data.User;
 import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.services.interfaces.client.ClientService;
 import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
@@ -35,21 +39,26 @@ public class ClientServiceImpl extends UnicastRemoteObject implements ClientServ
     }
 
     @Override
-    public List<Transaction> buy(List<Transaction> transactions)
-        throws RemoteException, ServerException, InterruptedException {
+    public List<Transaction> buy(String goodId, List<Transaction> transactions)
+        throws InterruptedException {
         ConcurrentLinkedDeque<Transaction> transactionResponse = new ConcurrentLinkedDeque<>();
         CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+        final Optional<Good> stateOfGood = HdsNotaryClient.getStateOfGood(
+            new User(ClientApplication.username, ClientApplication.userId), goodId);
 
         for (Transaction transaction : transactions) {
             CompletableFuture.runAsync(() -> {
                 try {
+
+
                     String sellerSignature = CryptoUtils.makeDigitalSignature(privateKey,
                         transaction.getTransactionId(),
                         transaction.getSellerId(),
                         transaction.getBuyerId(),
                         transaction.getGoodId());
                     transaction.setSellerSignature(sellerSignature);
-                    transactionResponse.add(hdsNotaryService.get(transaction.getServerId()).transferGood(transaction, 0, ""));
+                    transactionResponse.add(
+                        hdsNotaryService.get(transaction.getServerId()).transferGood(transaction, stateOfGood.get().getTimeStamp() + 1, ""));
                 } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException | RemoteException | ServerException e) {
                     logger.error(e);
                 }

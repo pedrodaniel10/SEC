@@ -31,6 +31,9 @@ public class ClientApplication {
 
     private static final Logger logger = Logger.getLogger(ClientApplication.class);
 
+    public static String username = "";
+    public static String userId;
+
     public static void main(String[] args)
         throws NotBoundException, MalformedURLException, RemoteException, SignatureException {
         // create the command line parser
@@ -47,7 +50,6 @@ public class ClientApplication {
         // automatically generate the help statement
         HelpFormatter formatter = new HelpFormatter();
 
-        String username = "";
         String password = "";
         try {
             CommandLine line = parser.parse(options, args);
@@ -84,6 +86,7 @@ public class ClientApplication {
         User user = null;
         try {
             user = HdsProperties.getUser(username);
+            userId = user.getUserId();
         } catch (UserNotFoundException e) {
             logger.error(e);
             System.exit(1);
