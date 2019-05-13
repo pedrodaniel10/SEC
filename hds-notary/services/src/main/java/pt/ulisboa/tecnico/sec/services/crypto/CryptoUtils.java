@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.sec.services.crypto;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -108,7 +109,7 @@ public final class CryptoUtils {
      * @param plainText    the plain text
      */
     public static boolean verifyDigitalSignature(PublicKey publicKey, String cipherDigest, String... plainText) {
-        return CryptoUtils.verifyDigitalSignature(publicKey,Base64.decodeBase64(cipherDigest), plainText);
+        return CryptoUtils.verifyDigitalSignature(publicKey, Base64.decodeBase64(cipherDigest), plainText);
     }
 
     /**
@@ -176,6 +177,18 @@ public final class CryptoUtils {
         return Base64.encodeBase64String(encryptedKey);
     }
 
+    public static byte[] computeSHA256Hash(String... input) throws NoSuchAlgorithmException {
+        String messageConcat = String.join("", input);
+        return computeSHA256Hash(messageConcat.getBytes());
+    }
+
+    private static byte[] computeSHA256Hash(byte[] inputBytes) throws NoSuchAlgorithmException {
+        byte[] digestBytes;
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        digestBytes = digest.digest(inputBytes);
+        return digestBytes;
+    }
+
     /**
      * Decodes the key into RSAPrivateKey
      *
@@ -226,6 +239,5 @@ public final class CryptoUtils {
         String messageConcat = String.join("", plainText);
         return CryptoUtils.verifyDigitalSignature(cipherDigest, messageConcat.getBytes(), publicKey);
     }
-
 
 }

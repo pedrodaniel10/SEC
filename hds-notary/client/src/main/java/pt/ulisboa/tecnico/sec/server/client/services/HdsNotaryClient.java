@@ -125,7 +125,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                 transaction.getBuyerId(),
                 transaction.getSellerSignature(),
                 transaction.getBuyerSignature())) {
-                throw new InvalidSignatureException("BuyGood: Transaction has signature invalid.");
+                throw new InvalidSignatureException("BuyGood (server " + transaction.getServerId() + "): Transaction has signature invalid.");
             }
         }
 

@@ -77,7 +77,8 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
     }
 
     @Override
-    public Transaction transferGood(Transaction transaction, int timeStamp, String signature) throws ServerException {
+    public Transaction transferGood(Transaction transaction, int timeStamp, String signature)
+        throws ServerException, NoSuchAlgorithmException {
         logger.debug("Called TransferGood: " + transaction.getSellerId());
         return this.serverState.transferGood(transaction, timeStamp, signature);
     }

@@ -31,6 +31,7 @@ import pt.ulisboa.tecnico.sec.services.exceptions.GoodIsNotOnSaleException;
 import pt.ulisboa.tecnico.sec.services.exceptions.GoodNotFoundException;
 import pt.ulisboa.tecnico.sec.services.exceptions.GoodWrongOwnerException;
 import pt.ulisboa.tecnico.sec.services.exceptions.InvalidNonceException;
+import pt.ulisboa.tecnico.sec.services.exceptions.InvalidProofOfWorkException;
 import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
 import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.services.exceptions.TransactionDoesntExistsException;
@@ -274,7 +275,8 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
     public Transaction transferGood(Transaction transaction, int timeStamp, String signature)
         throws GoodNotFoundException, TransactionDoesntExistsException, GoodWrongOwnerException,
                GoodIsNotOnSaleException,
-               UserNotFoundException, InvalidSignatureException, WrongTimeStampException {
+               UserNotFoundException, InvalidSignatureException, WrongTimeStampException, NoSuchAlgorithmException,
+               InvalidProofOfWorkException {
 
         String transactionId = transaction.getTransactionId();
         String sellerId = transaction.getSellerId();
@@ -322,6 +324,19 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         }
 
         // Check Transaction
+        // Check proof of work
+        byte[] hash = CryptoUtils.computeSHA256Hash(transaction.getTransactionId(),
+            transaction.getSellerId(),
+            transaction.getBuyerId(),
+            transaction.getGoodId(),
+            transaction.getBuyerSignature(),
+            transaction.getSellerSignature(),
+            transaction.getProofOfWork());
+
+        if (hash == null || hash[0] != 0) {
+            throw new InvalidProofOfWorkException("The proof of work is invalid with this transaction.");
+        }
+
         this.checkGood(sellerId, goodId, good);
         if (!StringUtils.equals(transactionResponse.get().getBuyerId(), buyerId)) {
             throw new TransactionDoesntExistsException(
@@ -330,9 +345,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Transfer good
         synchronized (pendingGoodTransactions) {
-            this.transactions.put(transactionId, transactionResponse.get());
-            transactionResponse.get().setBuyerSignature(buyerSignature);
-            transactionResponse.get().setSellerSignature(sellerSignature);
+            this.transactions.put(transactionId, transaction);
             pendingGoodTransactions.clear();
             good.setOwnerId(buyerId);
             good.setOnSale(false);
@@ -359,12 +372,12 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
                     sellerSignature,
                     buyerSignature);
             }
-            transactionResponse.get().setNotarySignature(notarySignature);
+            transaction.setNotarySignature(notarySignature);
 
             // Save State
             PersistenceUtils.save();
 
-            return transactionResponse.get();
+            return transaction;
         } catch (PKCS11Exception | NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             e.printStackTrace();
             throw new InvalidSignatureException("Notary was unable to sign the message.");
