@@ -50,129 +50,130 @@ public class ServerServiceTest {
         serverPublicKey = HdsProperties.getServerPublicKey("0");
         hdsNotaryService = (HdsNotaryService) Naming.lookup(HdsProperties.getServerUri("0"));
     }
-
-    // Status of Good
-    @Test
-    public void testOkStatusOfGood()
-        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        String userId = "0";
-        String goodId = "0";
-        String nonce = hdsNotaryService.getNonce(userId);
-
-        ImmutablePair<Good, String> response = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
-
-        Good good = response.getLeft();
-
-        Assert.assertEquals("House", good.getName());
-        Assert.assertEquals("2", good.getOwnerId());
-        Assert.assertEquals("0", good.getGoodId());
-        Assert.assertFalse(good.isOnSale());
-
-        boolean serverValidation = CryptoUtils.verifyDigitalSignature(serverPublicKey, response.getRight(),
-            goodId, Boolean.toString(good.isOnSale()), nonce);
-        Assert.assertTrue(serverValidation);
-    }
-
-    @Test
-    public void testOkTwoFollowedRequestsStatusOfGood()
-        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        String userId = "0";
-        String goodId = "0";
-        String nonce = hdsNotaryService.getNonce(userId);
-
-        Good good = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce)).getLeft();
-        Assert.assertNotNull(good);
-
-        nonce = hdsNotaryService.getNonce(userId);
-        good = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce)).getLeft();
-
-        Assert.assertNotNull(good);
-    }
-
-    @Test(expected = InvalidSignatureException.class)
-    public void testNOkSpoofingSignatureStateOfGood()
-        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        String userId = "0";
-        String goodId = "0";
-
-        String nonce = hdsNotaryService.getNonce(userId);
-
-        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
-            CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce));
-    }
-
-    @Test(expected = InvalidSignatureException.class)
-    public void testNOkSpoofingStateOfGood()
-        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        String userId = "1";
-        String goodId = "0";
-
-        String nonce = hdsNotaryService.getNonce(userId);
-
-        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
-    }
-
-    @Test(expected = InvalidSignatureException.class)
-    public void testNOkTamperingStateOfGood()
-        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        String userId = "0";
-        String goodId = "0";
-
-        String nonce = hdsNotaryService.getNonce(userId);
-
-        hdsNotaryService.getStateOfGood(userId, "different", nonce, 0,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
-    }
-
-    @Test(expected = InvalidNonceException.class)
-    public void testNOkReplayAttackStateOfGood()
-        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        String userId = "0";
-        String goodId = "1";
-        String nonce = hdsNotaryService.getNonce(userId);
-
-        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
-
-        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
-    }
-
-    @Test
-    public void testNOkServerSpoofingStateOfGood()
-        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        String userId = "0";
-        String goodId = "1";
-        String nonce = hdsNotaryService.getNonce(userId);
-
-        ImmutablePair<Good, String> response = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
-            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
-
-        String spoofedSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce);
-        boolean serverValidation = CryptoUtils.verifyDigitalSignature(serverPublicKey, spoofedSignature,
-            goodId, Boolean.toString(response.getLeft().isOnSale()), nonce);
-
-        Assert.assertFalse(serverValidation);
-    }
-
-    @Test(expected = ServerException.class)
-    public void testWrongStatusOfGood() throws ServerException, RemoteException {
-        hdsNotaryService.getStateOfGood("userId", "This id does not exist.", "", 0, null);
-    }
-
-    @Test(expected = ServerException.class)
-    public void testNullStatusOfGood() throws ServerException, RemoteException {
-        hdsNotaryService.getStateOfGood("userId", null, "", 0, null);
-    }
-
-    @Test(expected = ServerException.class)
-    public void testEmptyStatusOfGood() throws ServerException, RemoteException {
-        hdsNotaryService.getStateOfGood("userId", "     ", "", 0, null);
-    }
+//
+//    // Status of Good
+//    @Test
+//    public void testOkStatusOfGood()
+//        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException,
+//               MalformedURLException, NotBoundException {
+//        String userId = "0";
+//        String goodId = "0";
+//        String nonce = hdsNotaryService.getNonce(userId);
+//
+//        ImmutablePair<Good, String> response = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
+//            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
+//
+//        Good good = response.getLeft();
+//
+//        Assert.assertEquals("House", good.getName());
+//        Assert.assertEquals("2", good.getOwnerId());
+//        Assert.assertEquals("0", good.getGoodId());
+//        Assert.assertFalse(good.isOnSale());
+//
+//        boolean serverValidation = CryptoUtils.verifyDigitalSignature(serverPublicKey, response.getRight(),
+//            goodId, Boolean.toString(good.isOnSale()), nonce);
+//        Assert.assertTrue(serverValidation);
+//    }
+//
+//    @Test
+//    public void testOkTwoFollowedRequestsStatusOfGood()
+//        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+//        String userId = "0";
+//        String goodId = "0";
+//        String nonce = hdsNotaryService.getNonce(userId);
+//
+//        Good good = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
+//            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce)).getLeft();
+//        Assert.assertNotNull(good);
+//
+//        nonce = hdsNotaryService.getNonce(userId);
+//        good = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
+//            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce)).getLeft();
+//
+//        Assert.assertNotNull(good);
+//    }
+//
+//    @Test(expected = InvalidSignatureException.class)
+//    public void testNOkSpoofingSignatureStateOfGood()
+//        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+//        String userId = "0";
+//        String goodId = "0";
+//
+//        String nonce = hdsNotaryService.getNonce(userId);
+//
+//        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
+//            CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce));
+//    }
+//
+//    @Test(expected = InvalidSignatureException.class)
+//    public void testNOkSpoofingStateOfGood()
+//        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+//        String userId = "1";
+//        String goodId = "0";
+//
+//        String nonce = hdsNotaryService.getNonce(userId);
+//
+//        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
+//            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
+//    }
+//
+//    @Test(expected = InvalidSignatureException.class)
+//    public void testNOkTamperingStateOfGood()
+//        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+//        String userId = "0";
+//        String goodId = "0";
+//
+//        String nonce = hdsNotaryService.getNonce(userId);
+//
+//        hdsNotaryService.getStateOfGood(userId, "different", nonce, 0,
+//            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
+//    }
+//
+//    @Test(expected = InvalidNonceException.class)
+//    public void testNOkReplayAttackStateOfGood()
+//        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+//        String userId = "0";
+//        String goodId = "1";
+//        String nonce = hdsNotaryService.getNonce(userId);
+//
+//        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
+//            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
+//
+//        hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
+//            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
+//    }
+//
+//    @Test
+//    public void testNOkServerSpoofingStateOfGood()
+//        throws ServerException, RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+//        String userId = "0";
+//        String goodId = "1";
+//        String nonce = hdsNotaryService.getNonce(userId);
+//
+//        ImmutablePair<Good, String> response = hdsNotaryService.getStateOfGood(userId, goodId, nonce, 0,
+//            CryptoUtils.makeDigitalSignature(alicePrivateKey, userId, goodId, nonce));
+//
+//        String spoofedSignature = CryptoUtils.makeDigitalSignature(bobPrivateKey, userId, goodId, nonce);
+//        boolean serverValidation = CryptoUtils.verifyDigitalSignature(serverPublicKey, spoofedSignature,
+//            goodId, Boolean.toString(response.getLeft().isOnSale()), nonce);
+//
+//        Assert.assertFalse(serverValidation);
+//    }
+//
+//    @Test(expected = ServerException.class)
+//    public void testWrongStatusOfGood() throws ServerException, RemoteException {
+//        hdsNotaryService.getStateOfGood("userId", "This id does not exist.", "", 0, null);
+//    }
+//
+//    @Test(expected = ServerException.class)
+//    public void testNullStatusOfGood() throws ServerException, RemoteException {
+//        hdsNotaryService.getStateOfGood("userId", null, "", 0, null);
+//    }
+//
+//    @Test(expected = ServerException.class)
+//    public void testEmptyStatusOfGood() throws ServerException, RemoteException {
+//        hdsNotaryService.getStateOfGood("userId", "     ", "", 0, null);
+//    }
 
     // IntentionToSell
     @Test

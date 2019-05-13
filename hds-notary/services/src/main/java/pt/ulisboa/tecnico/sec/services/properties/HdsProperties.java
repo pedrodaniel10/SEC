@@ -84,6 +84,14 @@ public final class HdsProperties {
         return "//" + userProperties.getHost() + ":" + userProperties.getPort() + "/ClientService";
     }
 
+    public static String getClientBonarUri(String id) throws UserNotFoundException {
+        final UserProperties userProperties = properties.getUsers().get(id);
+        if (userProperties == null) {
+            throw new UserNotFoundException("User with id " + id + " was not found.");
+        }
+        return "//" + userProperties.getHost() + ":" + userProperties.getPort() + "/ReadBonarService";
+    }
+
     public static RSAPrivateKey getClientPrivateKey(String name, String password) {
         final UserProperties user = getUserByName(name);
         return CryptoUtils.getPrivateKey(user.getPrivateKey(), password);

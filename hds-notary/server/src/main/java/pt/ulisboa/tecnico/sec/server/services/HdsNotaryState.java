@@ -1,6 +1,10 @@
 package pt.ulisboa.tecnico.sec.server.services;
 
 import java.io.Serializable;
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -29,6 +33,7 @@ import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
 import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.services.exceptions.TransactionDoesntExistsException;
 import pt.ulisboa.tecnico.sec.services.exceptions.UserNotFoundException;
+import pt.ulisboa.tecnico.sec.services.interfaces.client.ReadBonarService;
 import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
 import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
@@ -194,12 +199,14 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
      * @throws GoodNotFoundException if the good doesn't exist.
      */
     @Override
-    public ImmutablePair<Good, String> getStateOfGood(String userId,
+    public void getStateOfGood(String userId,
         String goodId,
         String nonce,
         int readId,
         String signature)
-        throws GoodNotFoundException, InvalidSignatureException, UserNotFoundException, InvalidNonceException {
+        throws GoodNotFoundException, InvalidSignatureException, UserNotFoundException, InvalidNonceException,
+               RemoteException, NotBoundException, MalformedURLException, NoSuchAlgorithmException, InvalidKeyException,
+               SignatureException {
 
         User user = getUserById(userId);
 
@@ -220,16 +227,27 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
             throw new GoodNotFoundException("Good with id " + goodId + " not found.");
         }
 
+        good.getListening().put(userId, readId);
         user.generateNonce();
 
-        // Generate signature
-        try {
-            String serverSignature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(), goodId,
-                Boolean.toString(good.isOnSale()), nonce);
-            return new ImmutablePair<>(good, serverSignature);
-        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
-            throw new InvalidSignatureException("Server was unable to sign the message.");
-        }
+        ReadBonarService readBonarService = (ReadBonarService) Naming.lookup(
+            HdsProperties.getClientBonarUri(userId));
+
+        int timeStamp = good.getTimeStamp();
+        signature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(),
+            HdsNotaryApplication.serverId,
+            good.toString(),
+            "" + readId,
+            "" + timeStamp);
+
+        readBonarService.setStateOfGood(HdsNotaryApplication.serverId, good, readId, good.getTimeStamp(), signature);
+    }
+
+    @Override
+    public void completeGetStateOfGood(String userId, String goodId) throws RemoteException, UserNotFoundException {
+        Good good = this.goods.get(goodId);
+
+        good.getListening().remove(userId);
     }
 
     @Override
@@ -304,15 +322,15 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
                     transactionId,
                     sellerId,
                     buyerId,
-                    new String(sellerSignature),
-                    new String(buyerSignature));
+                    sellerSignature,
+                    buyerSignature);
             } else {
                 notarySignature = CryptoUtils.makeDigitalSignature(getNotaryPrivateKey(),
                     transactionId,
                     sellerId,
                     buyerId,
-                    new String(sellerSignature),
-                    new String(buyerSignature));
+                    sellerSignature,
+                    buyerSignature);
             }
             transactionResponse.get().setNotarySignature(notarySignature);
 

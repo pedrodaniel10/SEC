@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.sec.services.data;
 
 import java.io.Serializable;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 public class Good implements Serializable {
 
@@ -10,7 +11,7 @@ public class Good implements Serializable {
     private String ownerId;
     private boolean onSale;
     private int timeStamp;
-    private Map<User, Integer> listening;
+    private Map<String, Integer> listening;
 
     public Good() {
     }
@@ -64,11 +65,28 @@ public class Good implements Serializable {
         this.timeStamp = timeStamp;
     }
 
-    public Map<User, Integer> getListening() {
+    public Map<String, Integer> getListening() {
         return listening;
     }
 
-    public void setListening(Map<User, Integer> listening) {
+    public void setListening(Map<String, Integer> listening) {
         this.listening = listening;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Good) {
+            Good good = (Good) obj;
+            return StringUtils.equals(this.getName(),good.getName()) &&
+                StringUtils.equals(this.getGoodId(), good.getGoodId()) &&
+                StringUtils.equals(this.ownerId, good.getOwnerId()) &&
+                this.isOnSale() == good.isOnSale();
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return this.name + this.goodId + this.ownerId + this.onSale;
     }
 }

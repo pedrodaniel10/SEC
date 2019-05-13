@@ -1,11 +1,13 @@
 package pt.ulisboa.tecnico.sec.server.client.services;
 
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -13,13 +15,20 @@ import java.security.SignatureException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
@@ -30,11 +39,12 @@ import pt.ulisboa.tecnico.sec.services.exceptions.GoodIsNotOnSaleException;
 import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
 import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.services.interfaces.client.ClientService;
+import pt.ulisboa.tecnico.sec.services.interfaces.client.ReadBonarService;
 import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
 import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
 import pt.ulisboa.tecnico.sec.services.utils.Constants;
 
-public class HdsNotaryClient {
+public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarService, Serializable {
 
     private static final Logger logger = Logger.getLogger(HdsNotaryClient.class);
 
@@ -42,6 +52,13 @@ public class HdsNotaryClient {
     private static Map<String, RSAPublicKey> serverPublicKey = new HashMap<>();
     private static Map<String, PublicKey> notaryPublicKey = new HashMap<>();
     private static Map<String, HdsNotaryService> hdsNotaryService = new HashMap<>();
+    private static int readId = 0;
+    private static Map<Integer, Map<String, Good>> answers = new ConcurrentHashMap<>();
+    private static CountDownLatch latch;
+    private static Good lastGoodRead;
+
+    protected HdsNotaryClient() throws RemoteException {
+    }
 
     public static void init(User user, String username, String password) {
         // Get user private key
@@ -56,13 +73,14 @@ public class HdsNotaryClient {
         // Fill notary public keys
         fillNotaryPublicKey();
 
-        // Setup P2P service
+        // Setup P2P service && ReadBonar
         try {
             ClientService clientService = new ClientServiceImpl(hdsNotaryService, privateKey);
             final int registryPort = HdsProperties.getClientPort(username);
             final Registry reg = LocateRegistry.createRegistry(registryPort);
 
             reg.rebind("ClientService", clientService);
+            reg.rebind("ReadBonarService", new HdsNotaryClient());
 
             logger.info("ClientService up at port " + registryPort);
         } catch (RemoteException e) {
@@ -195,8 +213,12 @@ public class HdsNotaryClient {
     }
 
     public static Optional<Good> getStateOfGood(User user, String goodId) throws InterruptedException {
-        ConcurrentLinkedDeque<Good> goods = new ConcurrentLinkedDeque<>();
-        CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+        CountDownLatch latchResponses = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+        AtomicInteger successfulRequests = new AtomicInteger();
+        latch = new CountDownLatch(1);
+        // Clear answers and increment readId
+        answers.clear();
+        readId++;
 
         for (Map.Entry<String, HdsNotaryService> entry : hdsNotaryService.entrySet()) {
             CompletableFuture.runAsync(() -> {
@@ -205,32 +227,61 @@ public class HdsNotaryClient {
 
                     String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
 
-                    ImmutablePair<Good, String> response = entry.getValue().getStateOfGood(
+                    entry.getValue().getStateOfGood(
                         user.getUserId(),
                         goodId,
                         nonce,
-                        0,
+                        readId,
                         signature);
-                    Good good = response.getLeft();
 
-                    // Verify Signature
-                    if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(entry.getKey()),
-                        response.getRight(),
-                        goodId,
-                        Boolean.toString(good.isOnSale()),
-                        nonce)) {
-                        throw new InvalidSignatureException("Server has signature invalid.");
-                    }
-                    goods.add(good);
-                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException e) {
+                    successfulRequests.getAndIncrement();
+                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException | NotBoundException | MalformedURLException e) {
                     logger.error("Error on server id " + entry.getKey(), e);
                 }
-                latch.countDown();
+                latchResponses.countDown();
             });
         }
-        latch.await();
+        // Wait responses
+        latchResponses.await();
 
-        return goods.stream().findFirst();
+        if (successfulRequests.get() <= (Constants.N + Constants.F) / 2) {
+            completeGetStateOfGood(user, goodId);
+            return Optional.empty();
+        }
+
+        // Wait for a response with quorum
+        while (true) {
+            // Wait for 1 second at max and test if exists.
+            if (latch.await(1, TimeUnit.SECONDS)) {
+                completeGetStateOfGood(user, goodId);
+                return Optional.of(lastGoodRead);
+            }
+            for (Map.Entry<Integer, Map<String, Good>> entry : answers.entrySet()) {
+                final Collection<Good> goods = entry.getValue().values();
+                Set<Good> uniqueSet = new HashSet<>(goods);
+                for (Good temp : uniqueSet) {
+                    if (temp == null) {
+                        continue;
+                    }
+                    if (Collections.frequency(goods, temp) > (Constants.N + Constants.F) / 2) {
+                        completeGetStateOfGood(user, goodId);
+                        return Optional.of(temp);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void completeGetStateOfGood(User user, String goodId) {
+        for (Map.Entry<String, HdsNotaryService> serviceEntry : hdsNotaryService.entrySet()) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    serviceEntry.getValue().completeGetStateOfGood(user.getUserId(), goodId);
+                } catch (RemoteException | ServerException e) {
+                    logger.error("Error on server id " + serviceEntry.getKey(), e);
+                }
+            });
+        }
     }
 
     private static void fillServerPublicKey() {
@@ -239,7 +290,6 @@ public class HdsNotaryClient {
             serverPublicKey.put(id, HdsProperties.getServerPublicKey(id));
         }
     }
-
 
     private static void fillHdsNotaryService() {
         for (int i = 0; i < Constants.N; i++) {
@@ -270,6 +320,41 @@ public class HdsNotaryClient {
                 logger.error(e);
             }
         });
+
+    }
+
+    @Override
+    public synchronized void setStateOfGood(String serverId, Good good, int readId, int timeStamp, String signature)
+        throws InvalidSignatureException {
+        logger.debug("Called SetStateOfGood: " + serverId);
+        // Verify Signature
+        if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(serverId),
+            signature,
+            serverId,
+            good.toString(),
+            "" + readId,
+            "" + timeStamp)) {
+            throw new InvalidSignatureException("Server has signature invalid.");
+        }
+
+        answers.putIfAbsent(timeStamp, new ConcurrentHashMap<>());
+        answers.get(timeStamp).putIfAbsent(serverId, good);
+
+        // Count answers
+        for (Map.Entry<Integer, Map<String, Good>> entry : answers.entrySet()) {
+            final Collection<Good> goods = entry.getValue().values();
+            Set<Good> uniqueSet = new HashSet<>(goods);
+            for (Good temp : uniqueSet) {
+                if (temp == null) {
+                    continue;
+                }
+                if (Collections.frequency(goods, temp) > (Constants.N + Constants.F) / 2) {
+                    lastGoodRead = temp;
+                    latch.countDown();
+                    return;
+                }
+            }
+        }
 
     }
 }
