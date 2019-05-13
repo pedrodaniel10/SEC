@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
@@ -186,13 +187,12 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                 try {
 
                     String nonce = entry.getValue().getNonce(user.getUserId());
+                    int timeStamp = stateOfGood.get().getTimeStamp() + 1;
 
-                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
+                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce, Integer.toString(timeStamp));
 
                     ImmutablePair<Boolean, String> response = entry.getValue().intentionToSell(user.getUserId(), goodId,
-                        nonce,
-                        stateOfGood.get().getTimeStamp() + 1,
-                        signature);
+                        nonce, timeStamp, signature);
 
                     // Verify Signature
                     if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(entry.getKey()), response.getRight(),
@@ -228,7 +228,8 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                 try {
                     String nonce = entry.getValue().getNonce(user.getUserId());
 
-                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce);
+                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce,
+                        Integer.toString(readId));
 
                     entry.getValue().getStateOfGood(
                         user.getUserId(),

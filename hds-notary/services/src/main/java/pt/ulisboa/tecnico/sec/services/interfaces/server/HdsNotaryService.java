@@ -41,7 +41,7 @@ public interface HdsNotaryService extends Remote {
 
     void completeGetStateOfGood(String userId, String goodId) throws RemoteException, UserNotFoundException;
 
-    Transaction transferGood(Transaction transaction, int timeStamp, String signature)
+    Transaction transferGood(Transaction transaction, int timeStamp)
         throws RemoteException, ServerException, NoSuchAlgorithmException;
 
     ImmutablePair<PublicKey, String> getNotaryPublicKey()

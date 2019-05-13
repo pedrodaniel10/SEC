@@ -91,7 +91,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Verify Signature
         if (!CryptoUtils.verifyDigitalSignature(HdsProperties.getClientPublicKey(user.getName()), signature,
-            sellerId, goodId, nonce)) {
+            sellerId, goodId, nonce, Integer.toString(timeStamp))) {
             throw new InvalidSignatureException(
                 "Seller with id " + sellerId + " has signature invalid.");
         }
@@ -231,7 +231,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         // Verify Signature
         if (!CryptoUtils
             .verifyDigitalSignature(HdsProperties.getClientPublicKey(user.getName()), signature, userId, goodId,
-                nonce)) {
+                nonce, Integer.toString(readId))) {
             throw new InvalidSignatureException("GetStateOfGood: Signature is invalid.");
         }
         Good good = this.goods.get(goodId);
@@ -272,7 +272,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
     }
 
     @Override
-    public Transaction transferGood(Transaction transaction, int timeStamp, String signature)
+    public Transaction transferGood(Transaction transaction, int timeStamp)
         throws GoodNotFoundException, TransactionDoesntExistsException, GoodWrongOwnerException,
                GoodIsNotOnSaleException,
                UserNotFoundException, InvalidSignatureException, WrongTimeStampException, NoSuchAlgorithmException,
@@ -282,6 +282,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         String sellerId = transaction.getSellerId();
         String buyerId = transaction.getBuyerId();
         String goodId = transaction.getGoodId();
+        String proofOfWork = transaction.getProofOfWork();
 
         String sellerSignature = transaction.getSellerSignature();
         String buyerSignature = transaction.getBuyerSignature();
@@ -302,7 +303,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         if (!CryptoUtils
             .verifyDigitalSignature(HdsProperties.getClientPublicKey(userSeller.getName()), sellerSignature,
-                transactionId, sellerId, buyerId, goodId)) {
+                transactionId, sellerId, buyerId, goodId, proofOfWork, buyerSignature)) {
             throw new InvalidSignatureException("Seller signature is invalid.");
         }
 
@@ -330,7 +331,6 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
             transaction.getBuyerId(),
             transaction.getGoodId(),
             transaction.getBuyerSignature(),
-            transaction.getSellerSignature(),
             transaction.getProofOfWork());
 
         if (hash == null || hash[0] != 0) {

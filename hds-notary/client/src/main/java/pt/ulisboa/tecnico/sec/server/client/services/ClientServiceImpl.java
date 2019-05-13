@@ -50,14 +50,6 @@ public class ClientServiceImpl extends UnicastRemoteObject implements ClientServ
             CompletableFuture.runAsync(() -> {
                 try {
 
-                    // Create signature
-                    String sellerSignature = CryptoUtils.makeDigitalSignature(privateKey,
-                        transaction.getTransactionId(),
-                        transaction.getSellerId(),
-                        transaction.getBuyerId(),
-                        transaction.getGoodId());
-                    transaction.setSellerSignature(sellerSignature);
-
                     // Create proof of work (first byte = 0 => 8bits => 256 tentatives at most)
                     byte[] hash;
                     int counter = 0;
@@ -67,7 +59,6 @@ public class ClientServiceImpl extends UnicastRemoteObject implements ClientServ
                             transaction.getBuyerId(),
                             transaction.getGoodId(),
                             transaction.getBuyerSignature(),
-                            transaction.getSellerSignature(),
                             "" + counter);
                         if (hash[0] == 0) {
                             break;
@@ -77,8 +68,18 @@ public class ClientServiceImpl extends UnicastRemoteObject implements ClientServ
 
                     transaction.setProofOfWork("" + counter);
 
+                    // Create signature
+                    String sellerSignature = CryptoUtils.makeDigitalSignature(privateKey,
+                        transaction.getTransactionId(),
+                        transaction.getSellerId(),
+                        transaction.getBuyerId(),
+                        transaction.getGoodId(),
+                        transaction.getProofOfWork(),
+                        transaction.getBuyerSignature());
+                    transaction.setSellerSignature(sellerSignature);
+
                     transactionResponse.add(
-                        hdsNotaryService.get(transaction.getServerId()).transferGood(transaction, stateOfGood.get().getTimeStamp() + 1, ""));
+                        hdsNotaryService.get(transaction.getServerId()).transferGood(transaction, stateOfGood.get().getTimeStamp() + 1));
                 } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException | RemoteException | ServerException e) {
                     logger.error(e);
                 }
