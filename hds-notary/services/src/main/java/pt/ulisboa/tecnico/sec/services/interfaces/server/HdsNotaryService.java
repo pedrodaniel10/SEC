@@ -25,11 +25,11 @@ public interface HdsNotaryService extends Remote {
         String nonce,
         int timeStamp,
         String signature)
-        throws RemoteException, ServerException;
+        throws RemoteException, ServerException, InterruptedException;
 
     ImmutablePair<Transaction, String> intentionToBuy(String sellerId, String buyerId, String goodId, String nonce,
         String signature)
-        throws RemoteException, ServerException;
+        throws RemoteException, ServerException, InterruptedException;
 
     void getStateOfGood(String userId,
         String goodId,
@@ -37,12 +37,12 @@ public interface HdsNotaryService extends Remote {
         int readId,
         String signature)
         throws RemoteException, ServerException, NotBoundException, MalformedURLException, NoSuchAlgorithmException,
-               InvalidKeyException, SignatureException;
+               InvalidKeyException, SignatureException, InterruptedException;
 
     void completeGetStateOfGood(String userId, String goodId) throws RemoteException, UserNotFoundException;
 
     Transaction transferGood(Transaction transaction, int timeStamp)
-        throws RemoteException, ServerException, NoSuchAlgorithmException;
+        throws RemoteException, ServerException, NoSuchAlgorithmException, InterruptedException;
 
     ImmutablePair<PublicKey, String> getNotaryPublicKey()
         throws RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException;

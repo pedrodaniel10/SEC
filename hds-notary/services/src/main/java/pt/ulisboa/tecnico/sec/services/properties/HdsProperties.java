@@ -2,15 +2,12 @@ package pt.ulisboa.tecnico.sec.services.properties;
 
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.URISyntaxException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Map.Entry;
 import java.util.Optional;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
@@ -26,11 +23,10 @@ public final class HdsProperties {
 
     static {
         try {
-            File infoFile = new File(IOUtils.resourceToURL(INFO_FILE, classLoader).toURI());
+            InputStream infoFile = classLoader.getResourceAsStream(INFO_FILE);
 
-
-            properties = new Gson().fromJson(new JsonReader(new FileReader(infoFile)), Properties.class);
-        } catch (URISyntaxException | IOException e) {
+            properties = new Gson().fromJson(new JsonReader(new InputStreamReader(infoFile)), Properties.class);
+        } catch (Exception e) {
             logger.error(e);
         }
 
@@ -68,6 +64,13 @@ public final class HdsProperties {
         int port = HdsProperties.getServerPort(id);
         String host = serverProperties.getHost();
         return "//" + host + ":" + port + "/HdsNotaryService";
+    }
+
+    public static String getServerBroadcastUri(String id) {
+        final ServerProperties serverProperties = properties.getServers().get(id);
+        int port = HdsProperties.getServerPort(id);
+        String host = serverProperties.getHost();
+        return "//" + host + ":" + port + "/BroadcastService";
     }
 
     public static int getClientPort(String name) {

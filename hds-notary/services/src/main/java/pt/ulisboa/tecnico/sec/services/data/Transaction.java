@@ -1,6 +1,8 @@
 package pt.ulisboa.tecnico.sec.services.data;
 
 import java.io.Serializable;
+import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
 
 public class Transaction implements Serializable {
 
@@ -96,5 +98,27 @@ public class Transaction implements Serializable {
 
     public void setProofOfWork(String proofOfWork) {
         this.proofOfWork = proofOfWork;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Transaction) {
+            Transaction transaction = (Transaction) obj;
+            return StringUtils.equals(getBuyerId(), transaction.getBuyerId()) &&
+                StringUtils.equals(getSellerId(), transaction.getSellerId()) &&
+                StringUtils.equals(getGoodId(), transaction.getGoodId());
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return "Transaction{" +
+            " buyerId='" + buyerId + ", sellerId='" + sellerId + ", goodId='" + goodId + '}';
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getBuyerId(), getSellerId(), getGoodId());
     }
 }

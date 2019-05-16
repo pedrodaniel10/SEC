@@ -21,6 +21,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.server.HdsNotaryApplication;
+import pt.ulisboa.tecnico.sec.server.data.GetStateOfGoodRequest;
+import pt.ulisboa.tecnico.sec.server.data.IntentionToBuyRequest;
+import pt.ulisboa.tecnico.sec.server.data.IntentionToSellRequest;
+import pt.ulisboa.tecnico.sec.server.data.Request;
+import pt.ulisboa.tecnico.sec.server.data.TransferGoodRequest;
 import pt.ulisboa.tecnico.sec.server.utils.CcUtils;
 import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
 import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
@@ -85,7 +90,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         int timeStamp,
         String signature)
         throws GoodNotFoundException, GoodWrongOwnerException, UserNotFoundException, InvalidNonceException,
-               InvalidSignatureException, WrongTimeStampException {
+               InvalidSignatureException, WrongTimeStampException, RemoteException, InterruptedException {
 
         User user = getUserById(sellerId);
 
@@ -111,6 +116,10 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         if (timeStamp <= good.getTimeStamp()) {
             throw new WrongTimeStampException("The timestamp is below or equal.");
         }
+
+        //Broadcast
+        Request request = new IntentionToSellRequest(sellerId, goodId, timeStamp);
+        BroadcastServiceImpl.sendBroadcast(request);
 
         good.setOnSale(true);
         good.setTimeStamp(timeStamp);
@@ -152,7 +161,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         String nonce,
         String signature)
         throws GoodNotFoundException, GoodIsNotOnSaleException, GoodWrongOwnerException, UserNotFoundException,
-               InvalidSignatureException, InvalidNonceException {
+               InvalidSignatureException, InvalidNonceException, RemoteException, InterruptedException {
 
         User user = getUserById(buyerId);
 
@@ -171,6 +180,10 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         // Basic checks.
         checkGood(sellerId, goodId, good);
+
+        //Broadcast
+        Request request = new IntentionToBuyRequest(sellerId, buyerId, goodId);
+        BroadcastServiceImpl.sendBroadcast(request);
 
         List<Transaction> pendingGoodTransactions = this.getGoodsPendingTransaction(good);
 
@@ -219,7 +232,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         String signature)
         throws GoodNotFoundException, InvalidSignatureException, UserNotFoundException, InvalidNonceException,
                RemoteException, NotBoundException, MalformedURLException, NoSuchAlgorithmException, InvalidKeyException,
-               SignatureException {
+               SignatureException, InterruptedException {
 
         User user = getUserById(userId);
 
@@ -239,6 +252,10 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         if (good == null) {
             throw new GoodNotFoundException("Good with id " + goodId + " not found.");
         }
+
+        //Broadcast
+        Request request = new GetStateOfGoodRequest(userId, goodId, readId);
+        BroadcastServiceImpl.sendBroadcast(request);
 
         good.getListening().put(userId, readId);
         user.generateNonce();
@@ -276,7 +293,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         throws GoodNotFoundException, TransactionDoesntExistsException, GoodWrongOwnerException,
                GoodIsNotOnSaleException,
                UserNotFoundException, InvalidSignatureException, WrongTimeStampException, NoSuchAlgorithmException,
-               InvalidProofOfWorkException {
+               InvalidProofOfWorkException, RemoteException, InterruptedException {
 
         String transactionId = transaction.getTransactionId();
         String sellerId = transaction.getSellerId();
@@ -343,6 +360,10 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
                 "The Transaction doesn't refer to the buyer with id " + buyerId + ".");
         }
 
+        //Broadcast
+        Request request = new TransferGoodRequest(transaction, timeStamp);
+        BroadcastServiceImpl.sendBroadcast(request);
+
         // Transfer good
         synchronized (pendingGoodTransactions) {
             this.transactions.put(transactionId, transaction);
@@ -396,6 +417,52 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
                 }
             });
         }
+    }
+
+    private void broadcastRequest(Request request) {
+
+        /*
+        CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+
+        //Send echo to all processes
+        if (!sentEcho) {
+            sentEcho = true;
+
+            for (Map.Entry<String, BroadcastService> entry : broadcastService.entrySet()) {
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        entry.getValue().echo(request);
+                    } catch (RemoteException e) {
+                        logger.error(e);
+                    }
+                });
+            }
+        }
+
+        //Wait for quorum of echos with the same request
+        CompletableFuture.runAsync(() -> {
+            latch.countDown();
+        });
+
+        //When exists quorum
+        if (!sentReady) {
+            sentReady = true;
+
+            for (Map.Entry<String, BroadcastService> entry : broadcastService.entrySet()) {
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        entry.getValue().ready(request);
+                    } catch (RemoteException e) {
+                        logger.error(e);
+                    }
+                });
+            }
+        }
+
+        //Wait for quorum of echos with the same request
+        CompletableFuture.runAsync(() -> {
+            latch.countDown();
+        });*/
     }
 
     @Override
@@ -465,5 +532,4 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         }
         return user;
     }
-
 }

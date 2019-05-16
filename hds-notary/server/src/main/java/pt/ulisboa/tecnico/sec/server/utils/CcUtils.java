@@ -29,8 +29,8 @@ public final class CcUtils {
     private static PKCS11 pkcs11;
 
     public static void init() throws PteidException, ClassNotFoundException, NoSuchMethodException,
-                                      InvocationTargetException, IllegalAccessException, PKCS11Exception,
-                                      CertificateException {
+                                     InvocationTargetException, IllegalAccessException, PKCS11Exception,
+                                     CertificateException {
 
         System.loadLibrary("pteidlibj");
         pteid.Init("");

@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
@@ -126,7 +125,8 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                 transaction.getBuyerId(),
                 transaction.getSellerSignature(),
                 transaction.getBuyerSignature())) {
-                throw new InvalidSignatureException("BuyGood (server " + transaction.getServerId() + "): Transaction has signature invalid.");
+                throw new InvalidSignatureException(
+                    "BuyGood (server " + transaction.getServerId() + "): Transaction has signature invalid.");
             }
         }
 
@@ -135,7 +135,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
 
     public static List<Transaction> intentionToBuy(User user, Good good) throws InterruptedException {
         ConcurrentLinkedDeque<Transaction> transactionResponse = new ConcurrentLinkedDeque<>();
-        CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+        CountDownLatch latch = new CountDownLatch(Constants.N);
 
         for (Map.Entry<String, HdsNotaryService> entry : hdsNotaryService.entrySet()) {
             CompletableFuture.runAsync(() -> {
@@ -160,15 +160,19 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                     }
 
                     transactionResponse.add(response.getLeft());
-                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException e) {
-                    logger.error("Error on server id " + entry.getKey(), e);
+                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException | InterruptedException e) {
+                    logger.error("Error on server id " + entry.getKey());
                 }
                 latch.countDown();
             });
 
         }
 
-        latch.await();
+        boolean responses = false;
+        do {
+            responses = latch.await(3, TimeUnit.SECONDS);
+        } while (!responses && transactionResponse.size() < (Constants.N + Constants.F) / 2 + 1);
+
         final ArrayList<Transaction> transactions = new ArrayList<>(transactionResponse);
         if (transactions.size() <= (Constants.N + Constants.F) / 2) {
             return new ArrayList<>();
@@ -178,7 +182,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
 
     public static boolean intentionToSell(User user, String goodId) throws InterruptedException {
         ConcurrentLinkedDeque<Boolean> returnValue = new ConcurrentLinkedDeque<>();
-        CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+        CountDownLatch latch = new CountDownLatch(Constants.N);
 
         final Optional<Good> stateOfGood = getStateOfGood(user, goodId);
 
@@ -189,7 +193,8 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                     String nonce = entry.getValue().getNonce(user.getUserId());
                     int timeStamp = stateOfGood.get().getTimeStamp() + 1;
 
-                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce, Integer.toString(timeStamp));
+                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce,
+                        Integer.toString(timeStamp));
 
                     ImmutablePair<Boolean, String> response = entry.getValue().intentionToSell(user.getUserId(), goodId,
                         nonce, timeStamp, signature);
@@ -204,19 +209,23 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                     if (response.getLeft()) {
                         returnValue.add(response.getLeft());
                     }
-                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException e) {
-                    logger.error("Error on server id " + entry.getKey(), e);
+                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException | InterruptedException e) {
+                    logger.error("Error on server id " + entry.getKey());
                 }
                 latch.countDown();
             });
         }
-        latch.await();
+
+        boolean responses;
+        do {
+            responses = latch.await(3, TimeUnit.SECONDS);
+        } while (!responses && returnValue.size() <= (Constants.N + Constants.F) / 2);
 
         return (returnValue.size() > (Constants.N + Constants.F) / 2);
     }
 
     public static Optional<Good> getStateOfGood(User user, String goodId) throws InterruptedException {
-        CountDownLatch latchResponses = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
+        CountDownLatch latchResponses = new CountDownLatch(Constants.N);
         AtomicInteger successfulRequests = new AtomicInteger();
         latch = new CountDownLatch(1);
         // Clear answers and increment readId
@@ -239,44 +248,35 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                         signature);
 
                     successfulRequests.getAndIncrement();
-                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException | NotBoundException | MalformedURLException e) {
-                    logger.error("Error on server id " + entry.getKey(), e);
+                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException | NotBoundException | MalformedURLException | InterruptedException e) {
+                    logger.error("Error on server id " + entry.getKey());
                 }
                 latchResponses.countDown();
             }).exceptionally(e -> {
-                logger.error(e);
+                e.printStackTrace();
                 return null;
             });
         }
-        // Wait responses
-        latchResponses.await();
+
+        boolean responses;
+        Optional<Good> quorum;
+        do {
+            responses = latchResponses.await(3, TimeUnit.SECONDS);
+            quorum = existsQuorumGood(answers);
+        } while (!responses && !quorum.isPresent());
 
         if (successfulRequests.get() <= (Constants.N + Constants.F) / 2) {
             completeGetStateOfGood(user, goodId);
             return Optional.empty();
         }
 
-        // Wait for a response with quorum
-        while (true) {
-            // Wait for 1 second at max and test if exists.
-            if (latch.await(1, TimeUnit.SECONDS)) {
-                completeGetStateOfGood(user, goodId);
-                return Optional.of(lastGoodRead);
-            }
-            for (Map.Entry<Integer, Map<String, Good>> entry : answers.entrySet()) {
-                final Collection<Good> goods = entry.getValue().values();
-                Set<Good> uniqueSet = new HashSet<>(goods);
-                for (Good temp : uniqueSet) {
-                    if (temp == null) {
-                        continue;
-                    }
-                    if (Collections.frequency(goods, temp) > (Constants.N + Constants.F) / 2) {
-                        completeGetStateOfGood(user, goodId);
-                        return Optional.of(temp);
-                    }
-                }
-            }
+        if (quorum.isPresent()) {
+            completeGetStateOfGood(user, goodId);
+            return quorum;
         }
+
+        completeGetStateOfGood(user, goodId);
+        return Optional.of(lastGoodRead);
     }
 
     private static void completeGetStateOfGood(User user, String goodId) {
@@ -285,7 +285,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                 try {
                     serviceEntry.getValue().completeGetStateOfGood(user.getUserId(), goodId);
                 } catch (RemoteException | ServerException e) {
-                    logger.error("Error on server id " + serviceEntry.getKey(), e);
+                    logger.error("Error on server id " + serviceEntry.getKey());
                 }
             });
         }
@@ -328,6 +328,22 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
             }
         });
 
+    }
+
+    private static Optional<Good> existsQuorumGood(Map<Integer, Map<String, Good>> responses) {
+        for (Map.Entry<Integer, Map<String, Good>> entry : responses.entrySet()) {
+            final Collection<Good> goods = entry.getValue().values();
+            Set<Good> uniqueSet = new HashSet<>(goods);
+            for (Good temp : uniqueSet) {
+                if (temp == null) {
+                    continue;
+                }
+                if (Collections.frequency(goods, temp) > (Constants.N + Constants.F) / 2) {
+                    return Optional.of(temp);
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     @Override

@@ -79,13 +79,15 @@ public class ClientServiceImpl extends UnicastRemoteObject implements ClientServ
                     transaction.setSellerSignature(sellerSignature);
 
                     transactionResponse.add(
-                        hdsNotaryService.get(transaction.getServerId()).transferGood(transaction, stateOfGood.get().getTimeStamp() + 1));
-                } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException | RemoteException | ServerException e) {
+                        hdsNotaryService.get(transaction.getServerId())
+                            .transferGood(transaction, stateOfGood.get().getTimeStamp() + 1));
+                } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException | RemoteException | ServerException | InterruptedException e) {
                     logger.error(e);
                 }
                 latch.countDown();
             });
         }
+
         latch.await();
 
         final ArrayList<Transaction> response = new ArrayList<>(transactionResponse);

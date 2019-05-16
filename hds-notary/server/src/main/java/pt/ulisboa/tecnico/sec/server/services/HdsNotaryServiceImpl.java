@@ -33,7 +33,6 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
         return this.serverState;
     }
 
-
     @Override
     public String getNonce(String userId) throws ServerException {
         logger.debug("Called GetNonce: " + userId);
@@ -46,7 +45,7 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
         String nonce,
         int timeStamp,
         String signature)
-        throws ServerException {
+        throws ServerException, RemoteException, InterruptedException {
         logger.debug("Called IntentionToSell: " + sellerId);
         return this.serverState.intentionToSell(sellerId, goodId, nonce, timeStamp, signature);
     }
@@ -56,7 +55,7 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
         String buyerId,
         String goodId,
         String nonce,
-        String signature) throws ServerException {
+        String signature) throws ServerException, RemoteException, InterruptedException {
         logger.debug("Called IntentionToBuy: " + buyerId);
         return this.serverState.intentionToBuy(sellerId, buyerId, goodId, nonce, signature);
     }
@@ -65,7 +64,7 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
     public void getStateOfGood(String userId, String goodId, String nonce, int readId,
         String signature)
         throws ServerException, RemoteException, InvalidKeyException, NoSuchAlgorithmException, SignatureException,
-               NotBoundException, MalformedURLException {
+               NotBoundException, MalformedURLException, InterruptedException {
         logger.debug("Called GetStateOfGood: " + userId);
         this.serverState.getStateOfGood(userId, goodId, nonce, readId, signature);
     }
@@ -78,14 +77,14 @@ public class HdsNotaryServiceImpl extends UnicastRemoteObject implements HdsNota
 
     @Override
     public Transaction transferGood(Transaction transaction, int timeStamp)
-        throws ServerException, NoSuchAlgorithmException {
+        throws ServerException, NoSuchAlgorithmException, RemoteException, InterruptedException {
         logger.debug("Called TransferGood: " + transaction.getSellerId());
         return this.serverState.transferGood(transaction, timeStamp);
     }
 
     @Override
     public ImmutablePair<PublicKey, String> getNotaryPublicKey()
-        throws RemoteException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         logger.debug("Called GetNotaryPublicKey: ");
         return this.serverState.getNotaryPublicKey();
     }

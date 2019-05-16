@@ -77,7 +77,7 @@ public class Good implements Serializable {
     public boolean equals(Object obj) {
         if (obj instanceof Good) {
             Good good = (Good) obj;
-            return StringUtils.equals(this.getName(),good.getName()) &&
+            return StringUtils.equals(this.getName(), good.getName()) &&
                 StringUtils.equals(this.getGoodId(), good.getGoodId()) &&
                 StringUtils.equals(this.ownerId, good.getOwnerId()) &&
                 this.isOnSale() == good.isOnSale();

@@ -10,6 +10,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
+import pt.ulisboa.tecnico.sec.server.services.BroadcastServiceImpl;
 import pt.ulisboa.tecnico.sec.server.services.HdsNotaryServiceImpl;
 import pt.ulisboa.tecnico.sec.server.utils.CcUtils;
 import pt.ulisboa.tecnico.sec.server.utils.PersistenceUtils;
@@ -93,19 +94,19 @@ public class HdsNotaryApplication {
             System.exit(1);
         }
 
-        int registryPort = HdsProperties.getServerPort(serverId);
-
         try {
             if (signWithCC) {
                 CcUtils.init();
             }
 
-            //Bind RMI service
+            //Setup Notary Service && Broadcast
             HdsNotaryServiceImpl server = new HdsNotaryServiceImpl();
-
+            BroadcastServiceImpl broadcast = new BroadcastServiceImpl();
+            final int registryPort = HdsProperties.getServerPort(serverId);
             final Registry reg = LocateRegistry.createRegistry(registryPort);
 
             reg.rebind("HdsNotaryService", server);
+            reg.rebind("BroadcastService", broadcast);
 
             logger.info("Server up at port " + registryPort);
 
