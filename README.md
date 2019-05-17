@@ -31,7 +31,7 @@ To enable the library of the Portuguese Citizen Card, you need to set the path l
 ## How to compile
 To compile just run the command in the directory **/hds-notary/**:
 ```
-    mvn clean install -DskipTests
+    mvn clean install 
 ```
 **Note:** Is essential the presence of the flag _-DskipTests_, otherwise the tests will certainly fail
 as the class loaders don't yet exist at this point.
