@@ -11,19 +11,26 @@
             <plugins>
                 <plugin>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <configuration>
-                        <!-- to prevent deprecation warning: -->
-                        <killAfter>-1</killAfter>
-                        <mainClass>pt.ulisboa.tecnico.sec.server.client.ClientApplication
-                        </mainClass>
-                        <systemProperties>
-                        </systemProperties>
-                    </configuration>
                     <executions>
                         <execution>
+                            <id>good</id>
                             <goals>
                                 <goal>java</goal>
                             </goals>
+                            <configuration>
+                                <killAfter>-1</killAfter>
+                                <mainClass>pt.ulisboa.tecnico.sec.server.client.ClientApplication</mainClass>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>evil</id>
+                            <goals>
+                                <goal>java</goal>
+                            </goals>
+                            <configuration>
+                                <killAfter>-1</killAfter>
+                                <mainClass>pt.ulisboa.tecnico.sec.server.client.EvilClientApplication</mainClass>
+                            </configuration>
                         </execution>
                     </executions>
                     <groupId>org.codehaus.mojo</groupId>

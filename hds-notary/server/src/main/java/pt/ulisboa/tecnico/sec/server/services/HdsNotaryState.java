@@ -32,6 +32,7 @@ import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
 import pt.ulisboa.tecnico.sec.services.data.Good;
 import pt.ulisboa.tecnico.sec.services.data.Transaction;
 import pt.ulisboa.tecnico.sec.services.data.User;
+import pt.ulisboa.tecnico.sec.services.exceptions.BroadcastException;
 import pt.ulisboa.tecnico.sec.services.exceptions.GoodIsNotOnSaleException;
 import pt.ulisboa.tecnico.sec.services.exceptions.GoodNotFoundException;
 import pt.ulisboa.tecnico.sec.services.exceptions.GoodWrongOwnerException;
@@ -90,7 +91,8 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         int timeStamp,
         String signature)
         throws GoodNotFoundException, GoodWrongOwnerException, UserNotFoundException, InvalidNonceException,
-               InvalidSignatureException, WrongTimeStampException, RemoteException, InterruptedException {
+               InvalidSignatureException, WrongTimeStampException, RemoteException, InterruptedException,
+               BroadcastException {
 
         User user = getUserById(sellerId);
 
@@ -119,7 +121,13 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         //Broadcast
         Request request = new IntentionToSellRequest(sellerId, goodId, timeStamp);
-        BroadcastServiceImpl.sendBroadcast(request);
+        try {
+            signature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(),
+                HdsNotaryApplication.serverId, request.toString());
+        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+            throw new InvalidSignatureException("Server was unable to sign the message.");
+        }
+        BroadcastServiceImpl.sendBroadcast(request, signature);
 
         good.setOnSale(true);
         good.setTimeStamp(timeStamp);
@@ -161,7 +169,8 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         String nonce,
         String signature)
         throws GoodNotFoundException, GoodIsNotOnSaleException, GoodWrongOwnerException, UserNotFoundException,
-               InvalidSignatureException, InvalidNonceException, RemoteException, InterruptedException {
+               InvalidSignatureException, InvalidNonceException, RemoteException, InterruptedException,
+               BroadcastException {
 
         User user = getUserById(buyerId);
 
@@ -183,7 +192,13 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         //Broadcast
         Request request = new IntentionToBuyRequest(sellerId, buyerId, goodId);
-        BroadcastServiceImpl.sendBroadcast(request);
+        try {
+            signature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(),
+                HdsNotaryApplication.serverId, request.toString());
+        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+            throw new InvalidSignatureException("Server was unable to sign the message.");
+        }
+        BroadcastServiceImpl.sendBroadcast(request, signature);
 
         List<Transaction> pendingGoodTransactions = this.getGoodsPendingTransaction(good);
 
@@ -232,7 +247,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         String signature)
         throws GoodNotFoundException, InvalidSignatureException, UserNotFoundException, InvalidNonceException,
                RemoteException, NotBoundException, MalformedURLException, NoSuchAlgorithmException, InvalidKeyException,
-               SignatureException, InterruptedException {
+               SignatureException, InterruptedException, BroadcastException {
 
         User user = getUserById(userId);
 
@@ -255,7 +270,13 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         //Broadcast
         Request request = new GetStateOfGoodRequest(userId, goodId, readId);
-        BroadcastServiceImpl.sendBroadcast(request);
+        try {
+            signature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(),
+                HdsNotaryApplication.serverId, request.toString());
+        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+            throw new InvalidSignatureException("Server was unable to sign the message.");
+        }
+        BroadcastServiceImpl.sendBroadcast(request, signature);
 
         good.getListening().put(userId, readId);
         user.generateNonce();
@@ -293,7 +314,7 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
         throws GoodNotFoundException, TransactionDoesntExistsException, GoodWrongOwnerException,
                GoodIsNotOnSaleException,
                UserNotFoundException, InvalidSignatureException, WrongTimeStampException, NoSuchAlgorithmException,
-               InvalidProofOfWorkException, RemoteException, InterruptedException {
+               InvalidProofOfWorkException, RemoteException, InterruptedException, BroadcastException {
 
         String transactionId = transaction.getTransactionId();
         String sellerId = transaction.getSellerId();
@@ -362,7 +383,14 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
 
         //Broadcast
         Request request = new TransferGoodRequest(transaction, timeStamp);
-        BroadcastServiceImpl.sendBroadcast(request);
+        String signature;
+        try {
+            signature = CryptoUtils.makeDigitalSignature(getServerPrivateKey(),
+                HdsNotaryApplication.serverId, request.toString());
+        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+            throw new InvalidSignatureException("Server was unable to sign the message.");
+        }
+        BroadcastServiceImpl.sendBroadcast(request, signature);
 
         // Transfer good
         synchronized (pendingGoodTransactions) {
@@ -417,52 +445,6 @@ public final class HdsNotaryState implements HdsNotaryService, Serializable {
                 }
             });
         }
-    }
-
-    private void broadcastRequest(Request request) {
-
-        /*
-        CountDownLatch latch = new CountDownLatch((Constants.N + Constants.F) / 2 + 1);
-
-        //Send echo to all processes
-        if (!sentEcho) {
-            sentEcho = true;
-
-            for (Map.Entry<String, BroadcastService> entry : broadcastService.entrySet()) {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        entry.getValue().echo(request);
-                    } catch (RemoteException e) {
-                        logger.error(e);
-                    }
-                });
-            }
-        }
-
-        //Wait for quorum of echos with the same request
-        CompletableFuture.runAsync(() -> {
-            latch.countDown();
-        });
-
-        //When exists quorum
-        if (!sentReady) {
-            sentReady = true;
-
-            for (Map.Entry<String, BroadcastService> entry : broadcastService.entrySet()) {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        entry.getValue().ready(request);
-                    } catch (RemoteException e) {
-                        logger.error(e);
-                    }
-                });
-            }
-        }
-
-        //Wait for quorum of echos with the same request
-        CompletableFuture.runAsync(() -> {
-            latch.countDown();
-        });*/
     }
 
     @Override

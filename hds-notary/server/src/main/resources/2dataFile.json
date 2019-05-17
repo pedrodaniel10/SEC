@@ -42,7 +42,15 @@
 			"onSale": true,
 			"timeStamp": 0,
 			"listening": {}
-		}
+		},
+	    "3": {
+	      "name": "House Number 2",
+	      "goodId": "0",
+	      "ownerId": "2",
+	      "onSale": false,
+	      "timeStamp": 0,
+	      "listening": {}
+	    }
 	},
 	"pendingTransactions": {}
 }

@@ -29,13 +29,14 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 import pt.ulisboa.tecnico.sec.services.crypto.CryptoUtils;
 import pt.ulisboa.tecnico.sec.services.data.Good;
 import pt.ulisboa.tecnico.sec.services.data.Transaction;
 import pt.ulisboa.tecnico.sec.services.data.User;
-import pt.ulisboa.tecnico.sec.services.exceptions.GoodIsNotOnSaleException;
 import pt.ulisboa.tecnico.sec.services.exceptions.InvalidSignatureException;
 import pt.ulisboa.tecnico.sec.services.exceptions.ServerException;
 import pt.ulisboa.tecnico.sec.services.interfaces.client.ClientService;
@@ -44,9 +45,9 @@ import pt.ulisboa.tecnico.sec.services.interfaces.server.HdsNotaryService;
 import pt.ulisboa.tecnico.sec.services.properties.HdsProperties;
 import pt.ulisboa.tecnico.sec.services.utils.Constants;
 
-public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarService, Serializable {
+public class HdsNotaryEvilClient extends UnicastRemoteObject implements ReadBonarService, Serializable {
 
-    private static final Logger logger = Logger.getLogger(HdsNotaryClient.class);
+    private static final Logger logger = Logger.getLogger(HdsNotaryEvilClient.class);
 
     private static RSAPrivateKey privateKey;
     private static Map<String, RSAPublicKey> serverPublicKey = new HashMap<>();
@@ -57,7 +58,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
     private static CountDownLatch latch;
     private static Good lastGoodRead;
 
-    protected HdsNotaryClient() throws RemoteException {
+    protected HdsNotaryEvilClient() throws RemoteException {
     }
 
     public static void init(User user, String username, String password) {
@@ -80,7 +81,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
             final Registry reg = LocateRegistry.createRegistry(registryPort);
 
             reg.rebind("ClientService", clientService);
-            reg.rebind("ReadBonarService", new HdsNotaryClient());
+            reg.rebind("ReadBonarService", new HdsNotaryEvilClient());
 
             logger.info("ClientService up at port " + registryPort);
         } catch (RemoteException e) {
@@ -89,102 +90,21 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
 
     }
 
-    public static Optional<Transaction> buyGood(User user, String goodId)
-        throws RemoteException, ServerException, NoSuchAlgorithmException, InvalidKeyException,
-               SignatureException, NotBoundException, MalformedURLException, InterruptedException {
-
-        Good good = getStateOfGood(user, goodId).get();
-
-        if (!good.isOnSale()) {
-            throw new GoodIsNotOnSaleException("The good with id " + goodId + " is not on sale.");
-        }
-
-        // Intention to buy
-        final List<Transaction> transactionResponse = intentionToBuy(user, good);
-
-        // Buy good
-        ClientService clientServiceSeller =
-            (ClientService) Naming.lookup(HdsProperties.getClientUri(good.getOwnerId()));
-
-        for (Transaction transaction : transactionResponse) {
-            transaction.setBuyerSignature(CryptoUtils.makeDigitalSignature(privateKey,
-                transaction.getTransactionId(),
-                transaction.getSellerId(),
-                transaction.getBuyerId(),
-                transaction.getGoodId()));
-        }
-
-        List<Transaction> transactions = clientServiceSeller.buy(goodId, transactionResponse);
-
-        // Verify Signatures
-        for (Transaction transaction : transactions) {
-            if (!CryptoUtils.verifyDigitalSignature(notaryPublicKey.get(transaction.getServerId()),
-                transaction.getNotarySignature(),
-                transaction.getTransactionId(),
-                transaction.getSellerId(),
-                transaction.getBuyerId(),
-                transaction.getSellerSignature(),
-                transaction.getBuyerSignature())) {
-                throw new InvalidSignatureException(
-                    "BuyGood (server " + transaction.getServerId() + "): Transaction has signature invalid.");
-            }
-        }
-
-        return transactions.stream().findFirst();
+    public static Optional<Transaction> buyGood(User user, String goodId) {
+        return Optional.empty();
     }
 
     public static List<Transaction> intentionToBuy(User user, Good good) throws InterruptedException {
-        ConcurrentLinkedDeque<Transaction> transactionResponse = new ConcurrentLinkedDeque<>();
-        CountDownLatch latch = new CountDownLatch(Constants.N);
-
-        for (Map.Entry<String, HdsNotaryService> entry : hdsNotaryService.entrySet()) {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    String nonce = entry.getValue().getNonce(user.getUserId());
-                    String signature = CryptoUtils.makeDigitalSignature(privateKey, good.getOwnerId(), user.getUserId(),
-                        good.getGoodId(), nonce);
-
-                    final ImmutablePair<Transaction, String> response = entry.getValue()
-                        .intentionToBuy(
-                            good.getOwnerId(),
-                            user.getUserId(),
-                            good.getGoodId(),
-                            nonce,
-                            signature);
-
-                    // Verify Signature
-                    if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(entry.getKey()),
-                        response.getRight(),
-                        response.getLeft().getTransactionId(), nonce)) {
-                        throw new InvalidSignatureException("IntentionToBuy: Server has signature invalid.");
-                    }
-
-                    transactionResponse.add(response.getLeft());
-                } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException | InterruptedException e) {
-                    logger.error("Error on server id " + entry.getKey());
-                }
-                latch.countDown();
-            });
-
-        }
-
-        boolean responses = false;
-        do {
-            responses = latch.await(2, TimeUnit.SECONDS);
-        } while (!responses && transactionResponse.size() < (Constants.N + Constants.F) / 2 + 1);
-
-        final ArrayList<Transaction> transactions = new ArrayList<>(transactionResponse);
-        if (transactions.size() <= (Constants.N + Constants.F) / 2) {
-            return new ArrayList<>();
-        }
-        return transactions;
+        return new ArrayList<>();
     }
 
-    public static boolean intentionToSell(User user, String goodId) throws InterruptedException {
+    public static boolean intentionToSell(User user, String realGoodId) throws InterruptedException {
+        String fakeGoodId = realGoodId.equals("0") ? "3" : "0";
+
         ConcurrentLinkedDeque<Boolean> returnValue = new ConcurrentLinkedDeque<>();
         CountDownLatch latch = new CountDownLatch(Constants.N);
 
-        final Optional<Good> stateOfGood = getStateOfGood(user, goodId);
+        final Optional<Good> stateOfGood = getStateOfGood(user, realGoodId);
 
         for (Map.Entry<String, HdsNotaryService> entry : hdsNotaryService.entrySet()) {
             CompletableFuture.runAsync(() -> {
@@ -193,15 +113,24 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                     String nonce = entry.getValue().getNonce(user.getUserId());
                     int timeStamp = stateOfGood.get().getTimeStamp() + 1;
 
-                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId, nonce,
+                    AtomicReference<String> goodId = new AtomicReference<>("");
+                    if (NumberUtils.toInt(entry.getKey()) % 2 == 0) {
+                        goodId.set(fakeGoodId);
+                    } else {
+                        goodId.set(realGoodId);
+                    }
+
+                    String signature = CryptoUtils.makeDigitalSignature(privateKey, user.getUserId(), goodId.get(),
+                        nonce,
                         Integer.toString(timeStamp));
 
-                    ImmutablePair<Boolean, String> response = entry.getValue().intentionToSell(user.getUserId(), goodId,
+                    ImmutablePair<Boolean, String> response = entry.getValue().intentionToSell(user.getUserId(),
+                        goodId.get(),
                         nonce, timeStamp, signature);
 
                     // Verify Signature
                     if (!CryptoUtils.verifyDigitalSignature(serverPublicKey.get(entry.getKey()), response.getRight(),
-                        goodId,
+                        goodId.get(),
                         Boolean.toString(response.getLeft()), nonce)) {
                         throw new InvalidSignatureException("Server has signature invalid.");
                     }
@@ -210,7 +139,7 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                         returnValue.add(response.getLeft());
                     }
                 } catch (RemoteException | NoSuchAlgorithmException | InvalidKeyException | SignatureException | ServerException | InterruptedException e) {
-                    logger.error("Error on server id " + entry.getKey());
+                    logger.error("Error on server id " + entry.getKey() + " - " + e.getMessage());
                 }
                 latch.countDown();
             });
@@ -252,7 +181,10 @@ public class HdsNotaryClient extends UnicastRemoteObject implements ReadBonarSer
                     logger.error("Error on server id " + entry.getKey());
                 }
                 latchResponses.countDown();
-            }).exceptionally(e -> null);
+            }).exceptionally(e -> {
+                e.printStackTrace();
+                return null;
+            });
         }
 
         boolean responses;
