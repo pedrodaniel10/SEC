@@ -9,6 +9,7 @@ import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 import pteidlib.PTEID_Certif;
 import pteidlib.PteidException;
@@ -20,7 +21,7 @@ import sun.security.pkcs11.wrapper.PKCS11;
 import sun.security.pkcs11.wrapper.PKCS11Constants;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
 
-public class CcUtils {
+public final class CcUtils {
 
     private static final Logger logger = Logger.getLogger(CcUtils.class);
     private static long p11Session;
@@ -28,8 +29,8 @@ public class CcUtils {
     private static PKCS11 pkcs11;
 
     public static void init() throws PteidException, ClassNotFoundException, NoSuchMethodException,
-                                      InvocationTargetException, IllegalAccessException, PKCS11Exception,
-                                      CertificateException {
+                                     InvocationTargetException, IllegalAccessException, PKCS11Exception,
+                                     CertificateException {
 
         System.loadLibrary("pteidlibj");
         pteid.Init("");
@@ -78,7 +79,7 @@ public class CcUtils {
         return notaryPublicKey;
     }
 
-    public static byte[] signMessage(String... message) throws PKCS11Exception {
+    public static String signMessage(String... message) throws PKCS11Exception {
         String messageConcat = String.join("", message);
 
         // Get available keys
@@ -100,6 +101,6 @@ public class CcUtils {
         mechanism.mechanism = PKCS11Constants.CKM_SHA256_RSA_PKCS;
         mechanism.pParameter = null;
         pkcs11.C_SignInit(p11Session, mechanism, signatureKey);
-        return pkcs11.C_Sign(p11Session, messageConcat.getBytes(Charset.forName("UTF-8")));
+        return Base64.encodeBase64String(pkcs11.C_Sign(p11Session, messageConcat.getBytes(Charset.forName("UTF-8"))));
     }
 }
